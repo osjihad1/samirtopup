@@ -210,8 +210,107 @@ function verifyAdminToken(token) {
   }
 }
 
+// 5. HttpOnly Cookie & Session Middleware (Zero Direct API Access without Valid Cookie)
+const COOKIE_USER_NAME = 'samirtopup_session';
+const COOKIE_ADMIN_NAME = 'samirtopup_admin_session';
+
+function parseCookies(req) {
+  const list = {};
+  if (!req || !req.headers) return list;
+  const rc = req.headers.cookie;
+  if (rc) {
+    rc.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      if (parts.length >= 2) {
+        const name = parts[0].trim();
+        const val = parts.slice(1).join('=').trim();
+        list[name] = decodeURIComponent(val);
+      }
+    });
+  }
+  return list;
+}
+
+function appendCookieHeader(res, cookieStr) {
+  if (!res || !res.setHeader) return;
+  const existing = res.getHeader ? res.getHeader('Set-Cookie') : undefined;
+  if (!existing) {
+    res.setHeader('Set-Cookie', cookieStr);
+  } else if (Array.isArray(existing)) {
+    res.setHeader('Set-Cookie', [...existing, cookieStr]);
+  } else {
+    res.setHeader('Set-Cookie', [existing, cookieStr]);
+  }
+}
+
+function setSessionCookie(res, token, maxAgeSeconds = 7 * 24 * 60 * 60) {
+  const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+  const secureFlag = isSecure ? '; Secure' : '';
+  const cookieStr = `${COOKIE_USER_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax; HttpOnly${secureFlag}`;
+  appendCookieHeader(res, cookieStr);
+}
+
+function setAdminCookie(res, token, maxAgeSeconds = 12 * 60 * 60) {
+  const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+  const secureFlag = isSecure ? '; Secure' : '';
+  const cookieStr = `${COOKIE_ADMIN_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax; HttpOnly${secureFlag}`;
+  appendCookieHeader(res, cookieStr);
+}
+
+function clearUserCookie(res) {
+  const cookieStr = `${COOKIE_USER_NAME}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly`;
+  appendCookieHeader(res, cookieStr);
+}
+
+function clearAdminCookie(res) {
+  const cookieStr = `${COOKIE_ADMIN_NAME}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly`;
+  appendCookieHeader(res, cookieStr);
+}
+
+function extractUserToken(req) {
+  // 1. Primary: HttpOnly Session Cookie
+  const cookies = parseCookies(req);
+  if (cookies[COOKIE_USER_NAME]) {
+    return cookies[COOKIE_USER_NAME];
+  }
+  // 2. Secondary: Authorization Bearer header
+  const headers = req?.headers || {};
+  const authHeader = headers['authorization'] || headers['Authorization'] || '';
+  if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
+  }
+  if (headers['x-user-token']) {
+    return String(headers['x-user-token']).trim();
+  }
+  return '';
+}
+
+function verifyUserRequest(req) {
+  const token = extractUserToken(req);
+  if (!token) {
+    return {
+      valid: false,
+      error: 'অননুমোদিত অ্যাক্সেস! সরাসরি API রিকোয়েস্ট পাঠানো নিষেধ। শুধুমাত্র লগইন করা আসল ব্যবহারকারীর ভ্যালিড কুকি (Valid Session Cookie) প্রয়োজন।'
+    };
+  }
+  const result = verifySessionToken(token);
+  if (!result.valid) {
+    return {
+      valid: false,
+      error: 'অবৈধ বা মেয়াদোত্তীর্ণ কুকি সেশন! অনুগ্রহ করে পুনরায় লগইন করুন।'
+    };
+  }
+  return { valid: true, payload: result.payload, token };
+}
+
 function extractTokenFromRequest(req) {
-  const headers = req.headers || {};
+  // 1. Primary: HttpOnly Admin Session Cookie
+  const cookies = parseCookies(req);
+  if (cookies[COOKIE_ADMIN_NAME]) {
+    return cookies[COOKIE_ADMIN_NAME];
+  }
+  // 2. Secondary: Authorization Bearer header
+  const headers = req?.headers || {};
   const authHeader = headers['authorization'] || headers['Authorization'] || '';
   if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
     return authHeader.slice(7).trim();
@@ -220,7 +319,7 @@ function extractTokenFromRequest(req) {
     return String(headers['x-admin-token']).trim();
   }
   try {
-    const url = new URL(req.url, `http://${req.headers?.host || 'localhost'}`);
+    const url = new URL(req.url, `http://${headers.host || 'localhost'}`);
     return url.searchParams.get('adminToken') || url.searchParams.get('token') || '';
   } catch (e) {
     return '';
@@ -229,6 +328,9 @@ function extractTokenFromRequest(req) {
 
 function verifyAdminRequest(req) {
   const token = extractTokenFromRequest(req);
+  if (!token) {
+    return { valid: false, error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন কুকি বা টোকেন প্রয়োজন (Unauthorized)' };
+  }
   return verifyAdminToken(token);
 }
 
@@ -269,6 +371,13 @@ module.exports = {
   createAdminSessionToken,
   verifyAdminToken,
   verifyAdminRequest,
-  checkAdminCredentials
+  checkAdminCredentials,
+  parseCookies,
+  setSessionCookie,
+  setAdminCookie,
+  clearUserCookie,
+  clearAdminCookie,
+  extractUserToken,
+  verifyUserRequest
 };
 

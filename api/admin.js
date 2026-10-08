@@ -8,12 +8,15 @@ const {
   updateUser, 
   getSettingsData, 
   parseBody, 
-  setCors 
+  setCors,
+  purgeDemoData
 } = require('./_db');
 const { 
   createAdminSessionToken, 
   verifyAdminRequest, 
-  checkAdminCredentials 
+  checkAdminCredentials,
+  setAdminCookie,
+  clearAdminCookie
 } = require('./_crypto');
 
 // In-memory rate limiting map for brute-force login protection
@@ -73,11 +76,17 @@ function clearLoginAttempts(ip) {
 }
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const action = url.searchParams.get('action');
+
+  // Admin Logout: GET / POST ?action=logout
+  if (action === 'logout') {
+    clearAdminCookie(res);
+    return res.status(200).json({ success: true, message: 'অ্যাডমিন লগআউট সফল হয়েছে।' });
+  }
 
   // ==========================================
   // GET: Admin Verification or Dashboard Overview
@@ -103,6 +112,16 @@ module.exports = async function handler(req, res) {
     if (!auth.valid) {
       return res.status(401).json({
         error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন টোকেন প্রয়োজন (401 Unauthorized)'
+      });
+    }
+
+    // 3. Purge all legacy demo users, demo orders, and demo requests permanently
+    await purgeDemoData();
+
+    if (action === 'clean_demo') {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'সকল ডেমো ইউজার এবং ডেমো অর্ডার সফলভাবে মুছে ফেলা হয়েছে।' 
       });
     }
 
@@ -172,6 +191,7 @@ module.exports = async function handler(req, res) {
           role: 'super_admin'
         };
         const token = createAdminSessionToken(adminPayload);
+        setAdminCookie(res, token);
         return res.status(200).json({
           success: true,
           token,

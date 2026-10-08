@@ -10,18 +10,26 @@ const {
   parseBody, 
   setCors 
 } = require('./_db');
-const { verifyAdminRequest } = require('./_crypto');
+const { verifyUserRequest, verifyAdminRequest } = require('./_crypto');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-  // GET: List wallet deposit requests
+  // GET: List wallet deposit requests (Secured per request)
   if (req.method === 'GET') {
     const phone = url.searchParams.get('phone');
     if (phone) {
+      const userAuth = verifyUserRequest(req);
+      const adminAuth = verifyAdminRequest(req);
+      if (!adminAuth.valid && (!userAuth.valid || userAuth.payload?.phone !== phone)) {
+        return res.status(401).json({ 
+          error: 'অননুমোদিত অ্যাক্সেস! ওয়ালেট হিস্ট্রি দেখতে ভ্যালিড ইউজার কুকি দিয়ে লগইন করুন।' 
+        });
+      }
+
       const all = await findWalletRequests();
       const userReqs = all.filter(r => r.phone === phone);
       return res.status(200).json(userReqs);
@@ -37,12 +45,31 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(all);
   }
 
-  // POST: Submit add-money deposit request
+  // POST: Submit add-money deposit request (Zero Direct API Access without Valid User Cookie)
   if (req.method === 'POST') {
-    const data = await parseBody(req);
-    const { amount, method, sender_number, trxId, user_name, phone } = data;
+    // 1. Mandatory Cookie Check
+    const auth = verifyUserRequest(req);
+    if (!auth.valid) {
+      return res.status(401).json({ 
+        error: "অননুমোদিত অ্যাক্সেস! সরাসরি API রিকোয়েস্ট পাঠানো নিষেধ। শুধুমাত্র লগইন করা আসল ব্যবহারকারীর ভ্যালিড কুকি (Valid Session Cookie) প্রয়োজন।" 
+      });
+    }
 
-    if (data.isDemo || data.role === 'demo' || (phone === '01700000000' && String(user_name || '').toLowerCase().includes('demo'))) {
+    // 2. Real User Verification against Database
+    const sessionUser = auth.payload;
+    const dbUser = await findUser({ id: sessionUser.id });
+    if (!dbUser) {
+      return res.status(401).json({ 
+        error: "ব্যবহারকারী অ্যাকাউন্ট ডাটাবেসে পাওয়া যায়নি! অনুগ্রহ করে পুনরায় লগইন করুন।" 
+      });
+    }
+
+    const data = await parseBody(req);
+    const { amount, method, sender_number, trxId } = data;
+    const reqPhone = dbUser.phone || sessionUser.phone || '';
+    const reqUserName = dbUser.name || sessionUser.name || '';
+
+    if (data.isDemo || data.role === 'demo' || (reqPhone === '01700000000' && String(reqUserName || '').toLowerCase().includes('demo'))) {
       return res.status(403).json({ error: 'ডেমো অ্যাকাউন্ট দিয়ে ওয়ালেটে টাকা যোগ বা রিকোয়েস্ট করা যাবে না!' });
     }
 
@@ -75,11 +102,12 @@ module.exports = async function handler(req, res) {
 
     const newReq = {
       id: 'REQ-' + Math.floor(100 + Math.random() * 900),
-      user_name: user_name || 'Customer',
-      phone: phone || sender_number || '01700000000',
+      user_id: dbUser.id,
+      user_name: dbUser.name || sessionUser.name || 'Customer',
+      phone: dbUser.phone || sessionUser.phone || '01700000000',
       amount: depositAmount,
       method,
-      sender_number: sender_number || phone || '',
+      sender_number: sender_number || dbUser.phone || '',
       trxId: cleanTrx,
       status: 'Pending',
       date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),

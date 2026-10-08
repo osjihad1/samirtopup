@@ -1,7 +1,17 @@
 // Vercel Serverless Function: /api/auth
-// Features: Server-side Field Validation, Bot-Proof Captcha, Scrypt Password Hashing, Signed Session Tokens & MongoDB
+// Features: Server-side Field Validation, Bot-Proof Captcha, Scrypt Password Hashing, HttpOnly Cookie Sessions & MongoDB
 const { findUser, createUser, parseBody, setCors } = require('./_db');
-const { hashPassword, verifyPassword, createSessionToken, verifySessionToken, verifyCaptcha } = require('./_crypto');
+const { 
+  hashPassword, 
+  verifyPassword, 
+  createSessionToken, 
+  verifySessionToken, 
+  verifyCaptcha,
+  setSessionCookie,
+  clearUserCookie,
+  verifyUserRequest,
+  verifyAdminRequest
+} = require('./_crypto');
 
 // Validation Helpers
 function isValidBdPhone(phone) {
@@ -16,30 +26,31 @@ function isValidEmail(email) {
 }
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const action = url.searchParams.get('action') || 'login';
 
   // ==========================================
-  // 1. Token Verification & User Profile Sync
+  // 1. Session Logout: GET / POST ?action=logout
+  // ==========================================
+  if (action === 'logout') {
+    clearUserCookie(res);
+    return res.status(200).json({ success: true, message: 'লগআউট সফল হয়েছে।' });
+  }
+
+  // ==========================================
+  // 2. Cookie / Token Verification & User Profile Sync
   // ==========================================
   if (req.method === 'GET') {
     if (action === 'verify') {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.replace(/^Bearer\s+/i, '') || url.searchParams.get('token');
-      
-      if (!token) {
-        return res.status(401).json({ valid: false, error: 'No authorization token provided' });
+      const auth = verifyUserRequest(req);
+      if (!auth.valid) {
+        return res.status(401).json({ valid: false, error: auth.error });
       }
 
-      const result = verifySessionToken(token);
-      if (!result.valid) {
-        return res.status(401).json({ valid: false, error: result.error });
-      }
-
-      const user = await findUser({ id: result.payload.id });
+      const user = await findUser({ id: auth.payload.id });
       if (!user) {
         return res.status(404).json({ valid: false, error: 'User not found' });
       }
@@ -51,6 +62,13 @@ module.exports = async function handler(req, res) {
     const phone = url.searchParams.get('phone');
     const id = url.searchParams.get('id');
     if (phone || id) {
+      // Direct API probing protection: only authenticated user or admin can query user profiles
+      const userAuth = verifyUserRequest(req);
+      const adminAuth = verifyAdminRequest(req);
+      if (!adminAuth.valid && (!userAuth.valid || (phone && userAuth.payload?.phone !== phone))) {
+        return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস! শুধুমাত্র লগইন করা ব্যবহারকারী নিজের প্রোফাইল দেখতে পারেন।' });
+      }
+
       const user = await findUser({ phone, id });
       if (user) {
         const { password: _, salt: __, hash: ___, ...userSafe } = user;
@@ -142,8 +160,9 @@ module.exports = async function handler(req, res) {
 
     await createUser(newUser);
 
-    // E. Generate Session Token
+    // E. Generate Session Token & HttpOnly Cookie
     const token = createSessionToken(newUser);
+    setSessionCookie(res, token);
     const { salt: _, hash: __, ...userSafe } = newUser;
 
     return res.status(201).json({
@@ -191,8 +210,9 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ error: 'ভুল পাসওয়ার্ড! অনুগ্রহ করে আবার চেষ্টা করুন।' });
     }
 
-    // Generate Session Token
+    // Generate Session Token & HttpOnly Cookie
     const token = createSessionToken(user);
+    setSessionCookie(res, token);
     const { password: _, salt: __, hash: ___, ...userSafe } = user;
 
     return res.status(200).json({

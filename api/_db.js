@@ -320,6 +320,66 @@ async function saveBannersData(banners) {
   return banners;
 }
 
+// --- PURGE DEMO DATA ---
+async function purgeDemoData() {
+  const demoPhoneList = ['01822334455', '01933445566', '01655667788', '01744556677', '01511223344', '01711111111', '01700000000'];
+  const demoNames = ['Tanvir Hasan', 'Shuvo Ahmed', 'Nabil Gamer', 'Robiul Islam', 'Rakib Hossain', 'Sumon Gamer', 'Demo User', 'Samir Admin'];
+  const demoOrderIds = ['ST-98214', 'ST-98213', 'ST-98212', 'ST-98211', 'ST-98210', 'ST-97103'];
+  const demoReqIds = ['REQ-101', 'REQ-100'];
+
+  const db = await connectMongo();
+  if (db) {
+    try {
+      await db.collection('orders').deleteMany({
+        $or: [
+          { id: { $in: demoOrderIds } },
+          { phone: { $in: demoPhoneList } },
+          { user_name: { $in: demoNames } },
+          { isDemo: true }
+        ]
+      });
+      await db.collection('wallet_requests').deleteMany({
+        $or: [
+          { id: { $in: demoReqIds } },
+          { phone: { $in: demoPhoneList } },
+          { user_name: { $in: demoNames } }
+        ]
+      });
+      await db.collection('users').deleteMany({
+        $or: [
+          { phone: { $in: demoPhoneList } },
+          { name: { $in: demoNames } },
+          { isDemo: true },
+          { role: 'demo' }
+        ]
+      });
+    } catch (e) {
+      console.error('Error purging demo data in Mongo:', e.message);
+    }
+  }
+
+  const local = getDb();
+  local.orders = (local.orders || []).filter(o => 
+    !demoOrderIds.includes(o.id) && 
+    !demoPhoneList.includes(o.phone) && 
+    !demoNames.includes(o.user_name) &&
+    !o.isDemo
+  );
+  local.wallet_requests = (local.wallet_requests || []).filter(w => 
+    !demoReqIds.includes(w.id) && 
+    !demoPhoneList.includes(w.phone) && 
+    !demoNames.includes(w.user_name)
+  );
+  local.users = (local.users || []).filter(u => 
+    !demoPhoneList.includes(u.phone) && 
+    !demoNames.includes(u.name) && 
+    !u.isDemo && 
+    u.role !== 'demo'
+  );
+  saveDb(local);
+  return true;
+}
+
 // --- UTILITIES ---
 function parseBody(req) {
   return new Promise((resolve) => {
@@ -341,10 +401,16 @@ function parseBody(req) {
   });
 }
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function setCors(res, req) {
+  const origin = (req && req.headers && req.headers.origin) ? req.headers.origin : null;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Admin-Token, X-User-Token');
 }
 
 module.exports = {
@@ -365,6 +431,7 @@ module.exports = {
   saveSettingsData,
   getBannersData,
   saveBannersData,
+  purgeDemoData,
   // Legacy & file helpers
   getDb,
   saveDb,

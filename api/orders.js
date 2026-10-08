@@ -10,33 +10,44 @@ const {
   parseBody, 
   setCors 
 } = require('./_db');
-const { verifyAdminRequest } = require('./_crypto');
+const { verifyUserRequest, verifyAdminRequest } = require('./_crypto');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
   // ==========================================
-  // GET: List Orders (by id, phone, or all)
+  // GET: List Orders (Secured per request)
   // ==========================================
   if (req.method === 'GET') {
     const phone = url.searchParams.get('phone');
     const orderId = url.searchParams.get('id');
 
-    if (orderId) {
-      const orders = await findOrders({ id: orderId });
-      if (!orders.length) return res.status(404).json({ error: 'Order not found' });
-      return res.status(200).json(orders[0]);
+    // Individual user order check requires matching session cookie or admin
+    if (orderId || phone) {
+      const userAuth = verifyUserRequest(req);
+      const adminAuth = verifyAdminRequest(req);
+      if (!adminAuth.valid && (!userAuth.valid || (phone && userAuth.payload?.phone !== phone))) {
+        return res.status(401).json({ 
+          error: "অননুমোদিত অ্যাক্সেস! অর্ডার হিস্ট্রি দেখতে ভ্যালিড ইউজার কুকি প্রয়োজন (Unauthorized)" 
+        });
+      }
+
+      if (orderId) {
+        const orders = await findOrders({ id: orderId });
+        if (!orders.length) return res.status(404).json({ error: 'Order not found' });
+        return res.status(200).json(orders[0]);
+      }
+
+      if (phone) {
+        const userOrders = await findOrders({ phone });
+        return res.status(200).json(userOrders);
+      }
     }
 
-    if (phone) {
-      const userOrders = await findOrders({ phone });
-      return res.status(200).json(userOrders);
-    }
-
-    // Viewing all orders across all users strictly requires verified admin token
+    // Viewing all orders across all users strictly requires verified admin cookie
     const auth = verifyAdminRequest(req);
     if (!auth.valid) {
       return res.status(401).json({ error: 'Unauthorized: Admin authentication required to view all orders' });
@@ -46,15 +57,28 @@ module.exports = async function handler(req, res) {
   }
 
   // ==========================================
-  // POST: Create New Order
+  // POST: Create New Order (Per-Request User Cookie & DB Check)
   // ==========================================
   if (req.method === 'POST') {
-    const data = await parseBody(req);
-    const { product, package: pkgName, playerId, amount, method, trxId, phone, user_name } = data;
-
-    if (data.isDemo || data.role === 'demo' || (phone === '01700000000' && String(user_name || '').toLowerCase().includes('demo'))) {
-      return res.status(403).json({ error: "ডেমো অ্যাকাউন্ট দিয়ে অর্ডার করা যাবে না! আসল অ্যাকাউন্ট দিয়ে চেষ্টা করুন।" });
+    // 1. Mandatory Cookie Check: Zero Direct API Access without Valid User Cookie
+    const auth = verifyUserRequest(req);
+    if (!auth.valid) {
+      return res.status(401).json({ 
+        error: "অননুমোদিত অ্যাক্সেস! সরাসরি API রিকোয়েস্ট পাঠানো নিষেধ। শুধুমাত্র লগইন করা আসল ব্যবহারকারীর ভ্যালিড কুকি (Valid Session Cookie) প্রয়োজন।" 
+      });
     }
+
+    // 2. Real User Verification against MongoDB Database
+    const sessionUser = auth.payload;
+    const dbUser = await findUser({ id: sessionUser.id });
+    if (!dbUser) {
+      return res.status(401).json({ 
+        error: "ব্যবহারকারী অ্যাকাউন্ট ডাটাবেসে পাওয়া যায়নি! অনুগ্রহ করে পুনরায় লগইন করুন।" 
+      });
+    }
+
+    const data = await parseBody(req);
+    const { product, package: pkgName, playerId, amount, method, trxId } = data;
 
     if (!product || !amount) {
       return res.status(400).json({ error: 'প্রোডাক্ট এবং টাকার পরিমাণ আবশ্যক' });
@@ -100,30 +124,28 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 3. Wallet Balance Check & Atomic Deduction
+    // 3. Wallet Balance Check & Atomic Deduction using verified dbUser
     let newBalance = undefined;
-    const user = await findUser({ phone });
-    if (user) {
-      if ((user.balance || 0) < orderAmount) {
+    if (matchedMethod === 'Wallet') {
+      const currentBal = Number(dbUser.balance) || 0;
+      if (currentBal < orderAmount) {
         return res.status(400).json({ 
-          error: `অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! বর্তমান ব্যালেন্স: ${user.balance || 0} ৳, প্রয়োজন: ${orderAmount} ৳। আগে Add Money করুন।` 
+          error: `অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! বর্তমান ব্যালেন্স: ${currentBal} ৳, প্রয়োজন: ${orderAmount} ৳। আগে Add Money করুন।` 
         });
       }
-      newBalance = Math.max(0, (user.balance || 0) - orderAmount);
-      // Deduct balance atomically
-      await updateUser(user.id, {
+      newBalance = Math.max(0, currentBal - orderAmount);
+      await updateUser(dbUser.id, {
         balance: newBalance,
-        total_spend: (user.total_spend || 0) + orderAmount
+        total_spend: (Number(dbUser.total_spend) || 0) + orderAmount
       });
-    } else if (matchedMethod === 'Wallet') {
-      return res.status(400).json({ error: 'ব্যবহারকারী পাওয়া যায়নি! অনুগ্রহ করে লগইন করুন।' });
     }
 
     const newOrder = {
       id: 'ST-' + Math.floor(10000 + Math.random() * 90000),
       date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
-      user_name: user_name || 'Customer',
-      phone: phone || '01700000000',
+      user_id: dbUser.id,
+      user_name: dbUser.name || sessionUser.name || 'Customer',
+      phone: dbUser.phone || sessionUser.phone || '01700000000',
       product,
       package: pkgName || 'Topup Package',
       playerId: cleanPlayerId || 'N/A',

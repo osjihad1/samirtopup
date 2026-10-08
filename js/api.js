@@ -12,7 +12,7 @@ const API = {
 
     // 2. Try serverless backend
     try {
-      const res = await fetch("/api/notice");
+      const res = await fetch("/api/notice", { credentials: "include" });
       if (res.ok) return await res.json();
     } catch (e) {}
 
@@ -61,6 +61,7 @@ const API = {
       const adminTok = sessionStorage.getItem("samirtopup_admin_token");
       await fetch("/api/settings", {
         method: "POST",
+        credentials: "include",
         headers: { 
           "Content-Type": "application/json",
           ...(adminTok ? { "Authorization": "Bearer " + adminTok } : {})
@@ -95,6 +96,7 @@ const API = {
       const adminTok = sessionStorage.getItem("samirtopup_admin_token");
       await fetch("/api/settings", {
         method: "POST",
+        credentials: "include",
         headers: { 
           "Content-Type": "application/json",
           ...(adminTok ? { "Authorization": "Bearer " + adminTok } : {})
@@ -152,7 +154,16 @@ const API = {
     try {
       const u = JSON.parse(data);
       // Clean up legacy auto-created or fake demo users
-      if (u && (u.name === "Sumon Gamer" || u.email === "gamer@SamirTopup.com" || u.isDemo || u.role === "demo" || u.id === "DEMO-VISITOR")) {
+      const demoNames = ["Sumon Gamer", "Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Demo User"];
+      const demoPhones = ["01700000000", "01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01711111111"];
+      if (u && (
+        demoNames.includes(u.name) || 
+        demoPhones.includes(u.phone) || 
+        u.email === "gamer@SamirTopup.com" || 
+        u.isDemo || 
+        u.role === "demo" || 
+        u.id === "DEMO-VISITOR"
+      )) {
         this.setUser(null);
         return null;
       }
@@ -185,7 +196,7 @@ const API = {
   // Dynamic Bot-Proof Captcha Generator
   async getCaptcha() {
     try {
-      const res = await fetch("/api/captcha");
+      const res = await fetch("/api/captcha", { credentials: "include" });
       if (res.ok) {
         return await res.json();
       }
@@ -257,6 +268,7 @@ const API = {
     try {
       const res = await fetch("/api/auth?action=login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: emailOrPhone, password, captchaAnswer, captchaToken })
       });
@@ -328,6 +340,7 @@ const API = {
     try {
       const res = await fetch("/api/auth?action=register", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...userData, phone: cleanPhone, name: cleanName, email })
       });
@@ -364,7 +377,10 @@ const API = {
     return { success: true, user: newUser, message: "রেজিস্ট্রেশন সফল হয়েছে! অ্যাকাউন্ট তৈরি সম্পন্ন।" };
   },
 
-  logout() {
+  async logout() {
+    try {
+      await fetch("/api/auth?action=logout", { credentials: "include" });
+    } catch(e) {}
     this.setUser(null);
     window.location.reload();
   },
@@ -373,31 +389,24 @@ const API = {
   getOrders() {
     const list = localStorage.getItem("samirtopup_orders") || localStorage.getItem("SamirTopup_orders");
     if (!list) {
-      return [
-        {
-          id: "ST-98214",
-          product: "FF Uid TopUp (BD)",
-          package: "115 Diamonds",
-          playerId: "284759205",
-          amount: 78,
-          method: "bKash",
-          status: "Pending",
-          date: new Date().toLocaleString()
-        },
-        {
-          id: "ST-97103",
-          product: "FF Uid TopUp (BD)",
-          package: "Weekly Membership",
-          playerId: "283749281",
-          amount: 158,
-          method: "Nagad",
-          status: "Completed",
-          date: new Date(Date.now() - 3600000 * 24).toLocaleString()
-        }
-      ];
+      return [];
     }
     try {
-      return JSON.parse(list);
+      const parsed = JSON.parse(list);
+      if (!Array.isArray(parsed)) return [];
+      const demoOrderIds = ["ST-98214", "ST-98213", "ST-98212", "ST-98211", "ST-98210", "ST-97103"];
+      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000"];
+      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer"];
+      const cleaned = parsed.filter(o => 
+        o && !demoOrderIds.includes(o.id) &&
+        !demoPhones.includes(o.phone) &&
+        !demoNames.includes(o.user_name) &&
+        !o.isDemo
+      );
+      if (cleaned.length !== parsed.length) {
+        localStorage.setItem("samirtopup_orders", JSON.stringify(cleaned));
+      }
+      return cleaned;
     } catch {
       return [];
     }
@@ -418,9 +427,14 @@ const API = {
 
     // 1. Try serverless API
     try {
+      const token = this.getToken();
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": "Bearer " + token } : {})
+        },
         body: JSON.stringify(orderData)
       });
       const data = await res.json();
@@ -434,7 +448,7 @@ const API = {
         localStorage.setItem("samirtopup_orders", JSON.stringify(orders));
 
         if (user && orderData.method === "Wallet") {
-          user.balance = Math.max(0, (user.balance || 0) - orderData.amount);
+          user.balance = (typeof data.newBalance !== 'undefined') ? Number(data.newBalance) : Math.max(0, (user.balance || 0) - orderData.amount);
           user.total_spend = (user.total_spend || 0) + orderData.amount;
           this.setUser(user);
         }
@@ -503,9 +517,14 @@ const API = {
 
     // 1. Send to serverless / MongoDB backend
     try {
+      const token = this.getToken();
       const res = await fetch("/api/wallet", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": "Bearer " + token } : {})
+        },
         body: JSON.stringify(reqPayload)
       });
       const data = await res.json();
@@ -569,7 +588,7 @@ const API = {
         url = `/api/auth?id=${encodeURIComponent(user.id)}`;
       }
 
-      const res = await fetch(url, { headers });
+      const res = await fetch(url, { headers, credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         const updated = data.user || data;
@@ -613,5 +632,72 @@ const API = {
       return `images/${type}/${last}`;
     }
     return `images/${type}/${filename}`;
+  },
+
+  // Auto Purge All Legacy Demo Orders, Users, and Requests
+  cleanDemoData() {
+    try {
+      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000", "01711111111"];
+      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer", "Demo User", "Samir Admin"];
+      const demoOrders = ["ST-98214", "ST-98213", "ST-98212", "ST-98211", "ST-98210", "ST-97103"];
+      const demoReqs = ["REQ-101", "REQ-100"];
+
+      // 1. Clean localStorage orders
+      const rawOrders = localStorage.getItem("samirtopup_orders");
+      if (rawOrders) {
+        const parsed = JSON.parse(rawOrders);
+        if (Array.isArray(parsed)) {
+          const cleanOrders = parsed.filter(o => 
+            o && !demoOrders.includes(o.id) && 
+            !demoPhones.includes(o.phone) && 
+            !demoNames.includes(o.user_name) &&
+            !o.isDemo
+          );
+          localStorage.setItem("samirtopup_orders", JSON.stringify(cleanOrders));
+        }
+      }
+      localStorage.removeItem("SamirTopup_orders");
+
+      // 2. Clean localStorage accounts
+      const rawAccs = localStorage.getItem("samirtopup_accounts");
+      if (rawAccs) {
+        const parsed = JSON.parse(rawAccs);
+        if (Array.isArray(parsed)) {
+          const cleanAccs = parsed.filter(a => 
+            a && !demoPhones.includes(a.phone) && 
+            !demoNames.includes(a.name) && 
+            !a.isDemo && 
+            a.role !== "demo"
+          );
+          localStorage.setItem("samirtopup_accounts", JSON.stringify(cleanAccs));
+        }
+      }
+
+      // 3. Clean localStorage wallet requests
+      const rawReqs = localStorage.getItem("samirtopup_wallet_requests");
+      if (rawReqs) {
+        const parsed = JSON.parse(rawReqs);
+        if (Array.isArray(parsed)) {
+          const cleanReqs = parsed.filter(r => 
+            r && !demoReqs.includes(r.id) && 
+            !demoPhones.includes(r.phone) && 
+            !demoNames.includes(r.user_name)
+          );
+          localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(cleanReqs));
+        }
+      }
+
+      // 4. Clean active session if demo
+      const user = this.getUser();
+      if (user && (demoPhones.includes(user.phone) || demoNames.includes(user.name) || user.isDemo)) {
+        this.setUser(null);
+      }
+    } catch (e) {}
   }
 };
+
+// Immediate Execution on Load to Clean Client State
+try {
+  API.cleanDemoData();
+} catch (e) {}
+

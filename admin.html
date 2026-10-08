@@ -567,6 +567,9 @@
     </div>
 
     <div class="admin-nav-actions">
+      <button onclick="cleanAllDemoData()" class="btn-site-preview" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; cursor: pointer;">
+        <span>🧹 ডেমো ডাটা মুছুন</span>
+      </button>
       <a href="index.html" target="_blank" class="btn-site-preview">
         <span>👁️ Visit Live Shop</span>
       </a>
@@ -1107,6 +1110,7 @@
 
       try {
         const res = await fetch("/api/admin?action=verify", {
+          credentials: "include",
           headers: { "Authorization": "Bearer " + token }
         });
         const data = await res.json();
@@ -1150,6 +1154,7 @@
       try {
         const res = await fetch("/api/admin?action=login", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: u, password: p })
         });
@@ -1184,7 +1189,10 @@
       }
     }
 
-    function logoutAdmin() {
+    async function logoutAdmin() {
+      try {
+        await fetch("/api/admin?action=logout", { credentials: "include" });
+      } catch (e) {}
       sessionStorage.removeItem("samirtopup_admin_token");
       sessionStorage.removeItem("samirtopup_admin_logged");
       sessionStorage.removeItem("samirtopup_admin_profile");
@@ -1206,7 +1214,7 @@
 
       // 3. Load orders & users from API or Local
       try {
-        const res = await fetch("/api/admin", { headers: authHeaders });
+        const res = await fetch("/api/admin", { headers: authHeaders, credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           adminOrders = data.recentOrders || [];
@@ -1227,30 +1235,75 @@
         adminOrders = API.getOrders();
       }
 
-      adminWalletReqs = JSON.parse(localStorage.getItem("samirtopup_wallet_requests") || "[]");
-      if (adminWalletReqs.length === 0) {
-        adminWalletReqs = [
-          { id: "REQ-101", user_name: "Tanvir Hasan", phone: "01822334455", amount: 500, method: "bKash", trxId: "BK992A819K", status: "Pending", date: "Just now" },
-          { id: "REQ-100", user_name: "Shuvo Ahmed", phone: "01933445566", amount: 300, method: "Nagad", trxId: "NG8290192L", status: "Approved", date: "2 hrs ago" }
-        ];
-        localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(adminWalletReqs));
-      }
+      // Filter out any legacy demo orders, users, and wallet requests
+      const demoOrderIds = ["ST-98214", "ST-98213", "ST-98212", "ST-98211", "ST-98210", "ST-97103"];
+      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000", "01711111111"];
+      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer", "Demo User", "Samir Admin"];
+      const demoReqIds = ["REQ-101", "REQ-100"];
 
-      adminUsers = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-      if (adminUsers.length === 0) {
-        adminUsers = [
-          { id: 1001, name: "Tanvir Hasan", phone: "01822334455", email: "tanvir@gamer.com", balance: 450, total_spend: 3200, role: "user" },
-          { id: 1002, name: "Shuvo Ahmed", phone: "01933445566", email: "shuvo@gamer.com", balance: 120, total_spend: 1850, role: "user" },
-          { id: 1003, name: "Nabil Gamer", phone: "01655667788", email: "nabil@gamer.com", balance: 80, total_spend: 4120, role: "user" }
-        ];
-        localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
+      adminOrders = (adminOrders || []).filter(o => 
+        o && !demoOrderIds.includes(o.id) && 
+        !demoPhones.includes(o.phone) && 
+        !demoNames.includes(o.user_name) &&
+        !o.isDemo
+      );
+
+      adminWalletReqs = JSON.parse(localStorage.getItem("samirtopup_wallet_requests") || "[]");
+      adminWalletReqs = (adminWalletReqs || []).filter(r => 
+        r && !demoReqIds.includes(r.id) && 
+        !demoPhones.includes(r.phone) && 
+        !demoNames.includes(r.user_name)
+      );
+      localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(adminWalletReqs));
+
+      if (!adminUsers || adminUsers.length === 0) {
+        adminUsers = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
       }
+      adminUsers = (adminUsers || []).filter(u => 
+        u && !demoPhones.includes(u.phone) && 
+        !demoNames.includes(u.name) && 
+        !u.isDemo && 
+        u.role !== "demo"
+      );
+      localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
 
       updateMetrics();
       renderOrdersTable();
       renderWalletTable();
       renderUsersTable();
       populateFormFields();
+    }
+
+    async function cleanAllDemoData() {
+      if (!confirm("আপনি কি নিশ্চিত যে সকল ডেমো ইউজার এবং ডেমো অর্ডার মুছে ফেলতে চান?")) return;
+      const token = sessionStorage.getItem("samirtopup_admin_token");
+      try {
+        await fetch("/api/admin?action=clean_demo", {
+          credentials: "include",
+          headers: token ? { "Authorization": "Bearer " + token } : {}
+        });
+      } catch (e) {}
+
+      if (typeof API !== 'undefined' && API.cleanDemoData) {
+        API.cleanDemoData();
+      }
+      localStorage.removeItem("samirtopup_orders");
+      localStorage.removeItem("SamirTopup_orders");
+      localStorage.removeItem("samirtopup_wallet_requests");
+
+      adminOrders = [];
+      adminWalletReqs = [];
+      const accs = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
+      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000", "01711111111"];
+      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer", "Demo User", "Samir Admin"];
+      adminUsers = accs.filter(u => !demoPhones.includes(u.phone) && !demoNames.includes(u.name) && !u.isDemo && u.role !== 'demo');
+      localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
+
+      updateMetrics();
+      renderOrdersTable();
+      renderWalletTable();
+      renderUsersTable();
+      alert("✅ সকল ডেমো ইউজার এবং ডেমো অর্ডার সফলভাবে মুছে ফেলা হয়েছে!");
     }
 
     function updateMaintenancePill() {
@@ -1580,6 +1633,7 @@
       try {
         await fetch("/api/orders", {
           method: "PUT",
+          credentials: "include",
           headers: { 
             "Content-Type": "application/json",
             ...(token ? { "Authorization": "Bearer " + token } : {})
@@ -1646,6 +1700,7 @@
       try {
         const res = await fetch("/api/wallet", {
           method: "PUT",
+          credentials: "include",
           headers: { 
             "Content-Type": "application/json",
             ...(token ? { "Authorization": "Bearer " + token } : {})
@@ -1727,6 +1782,7 @@
       try {
         await fetch("/api/admin?action=adjust_balance", {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             ...(token ? { "Authorization": "Bearer " + token } : {})

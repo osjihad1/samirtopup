@@ -3,7 +3,7 @@ const { generateCaptcha, verifyCaptcha } = require('./_crypto');
 const { setCors, parseBody } = require('./_db');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // GET: Generate fresh captcha challenge

@@ -11,7 +11,7 @@ const {
 const { verifyAdminRequest } = require('./_crypto');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // GET: Fetch all site configuration
