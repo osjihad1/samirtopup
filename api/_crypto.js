@@ -339,26 +339,22 @@ function checkAdminCredentials(username, password) {
   const cleanUser = String(username).trim();
   const cleanPass = String(password).trim();
 
-  // Configured & allowed admin accounts
-  const envUser = (process.env.ADMIN_USERNAME || 'samir').trim();
-  const envPass = (process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET || 'samir123').trim();
+  // Only allow the single admin account defined in environment variables
+  const envUser = (process.env.ADMIN_USERNAME || '').trim();
+  const envPass = (process.env.ADMIN_PASSWORD || '').trim();
 
-  const allowed = [
-    { u: envUser, p: envPass },
-    { u: 'admin', p: process.env.ADMIN_PASSWORD || 'admin123' },
-    { u: 'samir', p: process.env.ADMIN_PASSWORD || 'samir123' }
-  ];
+  if (!envUser || !envPass) return false; // Block login if env vars not set
 
-  for (const acc of allowed) {
-    if (cleanUser === acc.u) {
-      const uBuf = Buffer.from(cleanPass);
-      const pBuf = Buffer.from(acc.p);
-      if (uBuf.length === pBuf.length && crypto.timingSafeEqual(uBuf, pBuf)) {
-        return true;
-      }
-    }
+  if (cleanUser !== envUser) return false;
+
+  try {
+    const uBuf = Buffer.from(cleanPass);
+    const pBuf = Buffer.from(envPass);
+    if (uBuf.length !== pBuf.length) return false;
+    return crypto.timingSafeEqual(uBuf, pBuf);
+  } catch (e) {
+    return false;
   }
-  return false;
 }
 
 module.exports = {
