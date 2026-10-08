@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - SAMIR TOPUP</title>
+  <meta name="description" content="Register your SAMIR TOPUP account and get 100 ৳ welcome balance!">
+  <meta name="theme-color" content="#042d49">
+  
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body style="justify-content: center; align-items: center; background: radial-gradient(circle at 50% 30%, #08243e, #041c30); padding: 40px 16px;">
+
+  <div style="width: 100%; max-width: 460px;">
+    <!-- Logo -->
+    <div style="text-align: center; margin-bottom: 24px;">
+      <a href="index.html" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP" style="height: 52px;">
+      </a>
+      <h1 style="font-size: 24px; font-weight: 800; color: white; margin-top: 10px;">Create Free Account</h1>
+      <p style="color: #38bdf8; font-size: 13px; font-weight: 600;">🔒 Fast, secure & verified gaming recharge account</p>
+    </div>
+
+    <!-- Registration Card -->
+    <div class="topup-card" style="padding: 28px;">
+      <form id="regForm" onsubmit="handleRegisterSubmit(event)">
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+            Full Name
+          </label>
+          <input type="text" id="regName" class="input-field" placeholder="e.g. Shakil Ahmed" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+            Phone Number (bKash/Nagad)
+          </label>
+          <input type="tel" id="regPhone" class="input-field" placeholder="01XXXXXXXXX" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+            Email Address
+          </label>
+          <input type="email" id="regEmail" class="input-field" placeholder="name@example.com" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+            Create Password
+          </label>
+          <input type="password" id="regPass" class="input-field" placeholder="At least 6 characters" minlength="6" required>
+        </div>
+
+        <!-- Bot-Proof Security Captcha -->
+        <div style="margin-bottom: 16px; background: rgba(2,18,34,0.7); border: 1px solid rgba(255,103,2,0.3); border-radius: 10px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 12px; font-weight: 700; color: #cbd5e1;">🤖 Security Captcha</label>
+            <span id="regCaptchaPrompt" style="font-size: 11px; color: #ff6702; font-weight: 700;">গণিত সমাধান করুন</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <div id="regCaptchaSvgContainer" style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 50px;">
+              <span style="color: #94a3b8; font-size: 12px;">ক্যাপচা লোড হচ্ছে...</span>
+            </div>
+            <button type="button" onclick="refreshRegCaptcha()" title="Refresh Captcha" class="btn-act btn-act-process" style="padding: 10px 14px; font-size: 16px; border-radius: 8px; cursor: pointer;">
+              🔄
+            </button>
+          </div>
+          <input type="text" id="regCaptchaInput" class="input-field" placeholder="ক্যাপচা কোড বা উত্তর লিখুন" required autocomplete="off" style="letter-spacing: 1px;">
+          <input type="hidden" id="regCaptchaToken">
+        </div>
+
+        <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 20px;">
+          <input type="checkbox" id="agreeTerms" required checked style="margin-top: 3px; accent-color: #ff6702;">
+          <label for="agreeTerms" style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
+            I agree to the <a href="terms.html" style="color: #ff6702; text-decoration: none;">Terms & Conditions</a> and <a href="privacy.html" style="color: #ff6702; text-decoration: none;">Privacy Policy</a>.
+          </label>
+        </div>
+
+        <button type="submit" id="btnRegSubmit" class="btn-buy-now" style="margin-top: 0; width: 100%;">
+          Complete Registration
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 14px; color: #94a3b8;">
+        Already have an account? <a href="login.html" style="color: #ff6702; font-weight: 700; text-decoration: none;">Log In</a>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 16px;">
+      <a href="index.html" style="color: #64748b; font-size: 13px; text-decoration: none;">← Back to SAMIR TOPUP</a>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let currentRegCaptcha = null;
+
+    async function refreshRegCaptcha() {
+      const container = document.getElementById("regCaptchaSvgContainer");
+      if (!container) return;
+      container.innerHTML = '<span style="color:#94a3b8; font-size:12px;">লোড হচ্ছে...</span>';
+      currentRegCaptcha = await API.getCaptcha();
+      if (currentRegCaptcha && currentRegCaptcha.svg) {
+        container.innerHTML = currentRegCaptcha.svg;
+        document.getElementById("regCaptchaToken").value = currentRegCaptcha.token || "";
+        if (currentRegCaptcha.prompt) {
+          document.getElementById("regCaptchaPrompt").textContent = currentRegCaptcha.prompt;
+        }
+      }
+      const inp = document.getElementById("regCaptchaInput");
+      if (inp) inp.value = "";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      refreshRegCaptcha();
+    });
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById("regName").value.trim();
+      const phone = document.getElementById("regPhone").value.trim().replace(/[\s-]/g, "");
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPass").value;
+      const captchaAnswer = document.getElementById("regCaptchaInput").value.trim();
+      const captchaToken = document.getElementById("regCaptchaToken").value;
+      const btn = document.getElementById("btnRegSubmit");
+
+      // Strict Anti-Fake Checks
+      if (name.length < 3 || !/^[a-zA-Z\u0980-\u09FF\s.]{3,35}$/.test(name)) {
+        showToast("অনুগ্রহ করে আপনার সঠিক নাম লিখুন (কমপক্ষে ৩ অক্ষর)!", "error");
+        return;
+      }
+      if (!/^(?:\+?88)?01[3-9]\d{8}$/.test(phone)) {
+        showToast("সঠিক বাংলাদেশি মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)!", "error");
+        return;
+      }
+      if (/^01[3-9](\d)\1{7}$/.test(phone)) {
+        showToast("নকল বা ডামি মোবাইল নম্বর গ্রহণযোগ্য নয়!", "error");
+        return;
+      }
+      if (password.length < 6) {
+        showToast("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে!", "error");
+        return;
+      }
+      if (!captchaAnswer) {
+        showToast("অনুগ্রহ করে ক্যাপচা কোডটি পূরণ করুন!", "error");
+        return;
+      }
+      if (!API.verifyCaptcha(captchaAnswer, captchaToken)) {
+        showToast("⚠️ ভুল ক্যাপচা উত্তর! অনুগ্রহ করে সঠিক উত্তর লিখুন।", "error");
+        refreshRegCaptcha();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "একাউন্ট তৈরি করা হচ্ছে...";
+
+      const res = await API.register({ 
+        name, 
+        phone, 
+        email, 
+        password,
+        captchaAnswer,
+        captchaToken
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Create Account";
+
+      if (res.success) {
+        showToast(res.message || "Registration successful!", "success");
+        setTimeout(() => {
+          window.location.href = "profile.html";
+        }, 1000);
+      } else {
+        showToast(res.message || "Registration failed", "error");
+        refreshRegCaptcha();
+      }
+    }
+  </script>
+</body>
+</html>
+

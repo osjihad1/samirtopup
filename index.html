@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAMIR TOPUP - FF Diamond Topup By BKash</title>
+  <meta name="description" content="Top up your favorite games in Bangladesh instantly using bKash, Nagad, or wallet. Fast, secure and reliable game top-up service.">
+  <meta name="theme-color" content="#042d49">
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link rel="apple-touch-icon" href="images/favicon.svg">
+
+  <!-- Fonts & Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body>
+
+  <!-- Top Announcement Bar -->
+  <div class="top-notice-bar">
+    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-right: 12px; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.3);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      NOTICE:
+    </div>
+    <div class="notice-ticker-wrapper">
+      <div id="noticeTickerText" class="notice-ticker-content">
+        যে কোনো সমস্যা হলে দ্রুত আমাদের সাপোর্ট দিন! ২৪/৭ ফাস্ট সার্ভিস। SAMIR TOPUP এর সাথে থাকার জন্য ধন্যবাদ!
+      </div>
+    </div>
+  </div>
+
+  <!-- Header Navbar -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="index.html" class="site-logo">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP Logo" onerror="this.src='images/favicon.svg'">
+        <div class="site-logo-text">
+          <span class="site-logo-title">SAMIR TOPUP</span>
+          <span class="site-logo-subtitle">Fast & Reliable Topup</span>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link active">Home</a></li>
+        <li><a href="shop.html" class="nav-link">Shop</a></li>
+        <li><a href="flashsale.html" class="nav-link flash-link">⚡ Flash Sale</a></li>
+        <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+        <li><a href="contactus.html" class="nav-link">Contact Us</a></li>
+      </ul>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <button onclick="openEventModal()" class="btn-event-nav" title="Special Event Announcement">
+          <span class="event-fire-icon">🎉</span> Event <span class="badge-pulse">HOT</span>
+        </button>
+        <button onclick="openSpinModal()" class="btn-spin-nav" title="Spin and Win Rewards">
+          <span>🎁</span> Spin & Win
+        </button>
+        <div id="authNavArea">
+          <!-- Populated by app.js -->
+          <a href="login.html" class="btn-login">Login</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Special Announcement Event Strip Below Header -->
+  <div class="header-event-strip" onclick="openEventModal()" title="Click to view special event announcement">
+    <div class="event-strip-container">
+      <div class="event-strip-left">
+        <span class="event-strip-tag">📢 বিশেষ বিজ্ঞপ্তি</span>
+        <span class="event-strip-title">এখানে গার্লফ্রেন্ড ভাড়া পাওয়া যায়! মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন</span>
+      </div>
+      <div class="event-strip-action">
+        <span>বুক করুন এখনই 👉</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Banner Carousel Section -->
+  <section class="hero-slider-section">
+    <div class="carousel-container" id="heroCarousel">
+      <!-- Slides loaded dynamically by app.js -->
+      <div class="carousel-slide active">
+        <img src="images/event_banner.jpg" alt="Special Event Banner" onclick="openEventModal()" style="cursor: pointer;">
+      </div>
+      <div class="carousel-slide">
+        <img src="images/banners/1791115595.jpg" alt="SAMIR TOPUP Banner 1">
+      </div>
+      <div class="carousel-slide">
+        <img src="images/banners/1785487439.jpg" alt="SAMIR TOPUP Banner 2">
+      </div>
+    </div>
+    <button class="carousel-btn carousel-prev" id="carouselPrev" aria-label="Previous Slide">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <button class="carousel-btn carousel-next" id="carouselNext" aria-label="Next Slide">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+    <div class="carousel-dots" id="carouselDots"></div>
+  </section>
+
+  <!-- Live Orders Ticker Stream -->
+  <div class="latest-orders-bar">
+    <div class="latest-orders-inner">
+      <div class="latest-badge">
+        <span style="display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:50%; animation: pulse-glow 1s infinite;"></span>
+        Live Orders
+      </div>
+      <div class="orders-stream" id="liveOrdersStream">
+        <span>সরাসরি ডেলিভারি</span> • <span>FF Uid 115 Diamonds</span> • <small>Just now</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flash Sale Highlight Section -->
+  <div class="flashsale-banner">
+    <div class="flashsale-card">
+      <div class="flashsale-left">
+        <span style="font-size: 26px;">🔥</span>
+        <div>
+          <h2 class="flashsale-title">WEEKLY LITE FLASH SALE</h2>
+          <p style="font-size: 13px; opacity: 0.9;">Special discounted prices on Free Fire Topups!</p>
+        </div>
+      </div>
+      <div class="flashsale-timer">
+        <span style="font-size: 13px; font-weight: 700; margin-right: 4px;">ENDS IN:</span>
+        <div class="timer-box" id="timerHours">05</div>:
+        <div class="timer-box" id="timerMinutes">42</div>:
+        <div class="timer-box" id="timerSeconds">19</div>
+        <a href="flashsale.html" style="margin-left: 14px; background: white; color: #ff6702; padding: 7px 16px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">View All</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Game Catalog & Products Container -->
+  <main class="main-content" id="productsCatalogArea">
+    <!-- Populated by JavaScript or fallback -->
+    
+    <!-- Category 1: FF TOPUP -->
+    <section class="mb-8">
+      <div class="section-header">
+        <h2 class="section-title">FF TOPUP</h2>
+      </div>
+      <div class="games-grid" id="ffTopupGrid">
+        <a href="topup.html?id=1" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763469001.jpg" alt="FF Uid TopUp (BD)">
+          </div>
+          <h3 class="game-card-title">FF Uid TopUp (BD)</h3>
+          <span class="game-card-badge">Instant Auto</span>
+        </a>
+
+        <a href="topup.html?id=114" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763469001.jpg" alt="New Level Up Pass">
+          </div>
+          <h3 class="game-card-title">New Level Up Pass</h3>
+          <span class="game-card-badge">Special Pass</span>
+        </a>
+
+        <a href="topup.html?id=88" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763469001.jpg" alt="Weekly Lite">
+          </div>
+          <h3 class="game-card-title">Weekly Lite (BD)</h3>
+          <span class="game-card-badge">Best Seller</span>
+        </a>
+
+        <a href="topup.html?id=77" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763469001.jpg" alt="Weekly/Monthly Offer">
+          </div>
+          <h3 class="game-card-title">Weekly/Monthly Offer</h3>
+          <span class="game-card-badge">Membership</span>
+        </a>
+
+        <a href="topup.html?id=78" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763469001.jpg" alt="Indonesia Server">
+          </div>
+          <h3 class="game-card-title">Indonesia Server (UID)</h3>
+          <span class="game-card-badge">Global</span>
+        </a>
+
+        <a href="topup.html?id=999" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763469001.jpg" alt="FF ID Like">
+          </div>
+          <h3 class="game-card-title">FF ID Like (BD)</h3>
+          <span class="game-card-badge">Social Like</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Category 2: More Items -->
+    <section class="mb-8">
+      <div class="section-header">
+        <h2 class="section-title">MORE ITEMS</h2>
+      </div>
+      <div class="games-grid" id="moreItemsGrid">
+        <a href="topup.html?id=98" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1763473710.jpg" alt="PUBG Mobile" onerror="this.src='images/products/1763469001.jpg'">
+          </div>
+          <h3 class="game-card-title">PUBG Mobile (UID)</h3>
+          <span class="game-card-badge">UC Topup</span>
+        </a>
+
+        <a href="topup.html?id=126" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1778671579.jpg" alt="Facebook Followers" onerror="this.src='images/products/1763469001.jpg'">
+          </div>
+          <h3 class="game-card-title">Facebook Followers</h3>
+          <span class="game-card-badge">Page / ID</span>
+        </a>
+
+        <a href="topup.html?id=127" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1778671673.jpg" alt="Facebook Post React" onerror="this.src='images/products/1763469001.jpg'">
+          </div>
+          <h3 class="game-card-title">Facebook Post React</h3>
+          <span class="game-card-badge">Social Growth</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Category 3: Social Media Service -->
+    <section class="mb-8">
+      <div class="section-header">
+        <h2 class="section-title">SOCIAL MEDIA SERVICE</h2>
+      </div>
+      <div class="games-grid" id="socialMediaGrid">
+        <a href="topup.html?id=105" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1787820626.jpg" alt="All Subscriptions" onerror="this.src='images/products/1763469001.jpg'">
+          </div>
+          <h3 class="game-card-title">All Subscriptions (EpikBD)</h3>
+          <span class="game-card-badge">OTT & Subs</span>
+        </a>
+
+        <a href="topup.html?id=108" class="game-card">
+          <div class="game-card-img-wrapper">
+            <img src="images/products/1787820878.jpg" alt="All Social Media" onerror="this.src='images/products/1763469001.jpg'">
+          </div>
+          <h3 class="game-card-title">All Social Media (EpikBD)</h3>
+          <span class="game-card-badge">Services</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Leaderboard Preview Section -->
+    <section class="leaderboard-preview-section">
+      <div class="section-header" style="margin-top: 0;">
+        <h2 class="section-title">TOP SPENDERS LEADERBOARD</h2>
+      </div>
+
+      <!-- Podium Top 3 -->
+      <div class="podium-container">
+        <!-- 2nd Place -->
+        <div class="podium-item second">
+          <div class="podium-avatar">
+            <img src="images/avatars/avatar2.svg" alt="Runner Up" onerror="this.src='images/avatars/default.svg'">
+            <div class="podium-rank-badge">2</div>
+          </div>
+          <div class="podium-name">Md Shakil</div>
+          <div class="podium-amount">৳84,200</div>
+        </div>
+
+        <!-- 1st Place -->
+        <div class="podium-item first">
+          <div class="podium-avatar">
+            <img src="images/avatars/avatar1.svg" alt="Top Spender" onerror="this.src='images/avatars/default.svg'">
+            <div class="podium-rank-badge">1</div>
+          </div>
+          <div class="podium-name">Sumon Khan 👑</div>
+          <div class="podium-amount">৳116,020</div>
+        </div>
+
+        <!-- 3rd Place -->
+        <div class="podium-item third">
+          <div class="podium-avatar">
+            <img src="images/avatars/avatar3.svg" alt="3rd Place" onerror="this.src='images/avatars/default.svg'">
+            <div class="podium-rank-badge">3</div>
+          </div>
+          <div class="podium-name">Arif Hassan</div>
+          <div class="podium-amount">৳62,490</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 15px;">
+        <a href="leaderboard.html" class="btn-login" style="padding: 9px 24px;">View Full Leaderboard (Top 100)</a>
+      </div>
+    </section>
+
+    <!-- Video Tutorial & Guides -->
+    <section class="guide-video-section">
+      <div class="guide-video-left">
+        <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 10px;">কীভাবে SAMIR TOPUP এ ডায়মন্ড কিনবেন?</h3>
+        <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+          সহজ কয়েকটি ধাপে ফ্রি ফায়ার ইউআইডি টপআপ করুন bKash অথবা Nagad এর মাধ্যমে। অর্ডার সম্পন্ন হতে মাত্র ৩০ সেকেন্ড থেকে ২ মিনিট সময় লাগে।
+        </p>
+        <ul style="color: #cbd5e1; font-size: 13px; list-style: none; display: flex; flex-direction: column; gap: 8px;">
+          <li>✓ ১. আপনার পছন্দমতো ডায়মন্ড প্যাকেজ সিলেক্ট করুন</li>
+          <li>✓ ২. আপনার ফ্রি ফায়ার প্লেয়ার ইউআইডি (UID) লিখুন</li>
+          <li>✓ ৩. bKash / Nagad বা সাইট ওয়ালেট দিয়ে পেমেন্ট করুন</li>
+          <li>✓ ৪. পেমেন্ট সম্পন্ন হলেই ডায়মন্ড স্বয়ংক্রিয়ভাবে ইন-গেমে চলে যাবে!</li>
+        </ul>
+      </div>
+      <div class="guide-video-right" style="position: relative; cursor: pointer;" onclick="window.location.href='shop.html'">
+        <img src="images/notices/1773253933_home_page_footer_thumbnail.jpg" alt="SAMIR TOPUP Guide" style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px;">
+          <div style="width: 56px; height: 56px; background: #ff6702; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(255,103,2,0.6);">▶</div>
+          <span style="color: #fff; font-weight: 800; font-size: 14px;">সহজেই ডায়মন্ড টপআপ করুন</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <!-- Col 1: About -->
+        <div class="footer-col">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="images/favicon.svg" alt="SAMIR TOPUP" style="height: 36px; width: 36px; border-radius: 8px;">
+            <span style="font-size: 18px; font-weight: 800; color: white; letter-spacing: 0.5px;">SAMIR TOPUP</span>
+          </div>
+          <p style="font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 14px;">
+            SAMIR TOPUP is Bangladesh's most reliable and fast gaming recharge portal. 100% automated delivery with bKash and Nagad payment options.
+          </p>
+          <div style="display: flex; gap: 10px;">
+            <a href="https://t.me/+JuqQydRD64Q2YmE1" target="_blank" style="background: #0088cc; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration: none;">Telegram Group</a>
+            <a href="https://youtu.be/OSE4qFSRqgs" target="_blank" style="background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration: none;">YouTube</a>
+          </div>
+        </div>
+
+        <!-- Col 2: Navigation -->
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul class="footer-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="shop.html">Shop Catalog</a></li>
+            <li><a href="flashsale.html">Flash Sale</a></li>
+            <li><a href="leaderboard.html">Top Spenders</a></li>
+            <li><a href="profile.html">My Account</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Support -->
+        <div class="footer-col">
+          <h4>Customer Care</h4>
+          <ul class="footer-links">
+            <li><a href="contactus.html">Contact Us</a></li>
+            <li><a href="https://t.me/SamirTopuphelp" target="_blank">Telegram Helpdesk</a></li>
+            <li><a href="profile.html">Add Money to Wallet</a></li>
+            <li><a href="profile.html">Order Status</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 4: Legal Policies -->
+        <div class="footer-col">
+          <h4>Legal Policies</h4>
+          <ul class="footer-links">
+            <li><a href="terms.html">Terms & Conditions</a></li>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="refund.html">Refund Policy</a></li>
+            <li><a href="delete-account.html">Delete Account Policy</a></li>
+            <li><a href="about-us.html">About Us</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 SAMIR TOPUP. All rights reserved.</div>
+        <div>Fast, Safe & 100% Trusted Gaming Topup • <a href="admin.html" style="color: #ff6702; text-decoration: none; font-weight: 700;">🔐 Admin Panel</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Floating Help / Support Button -->
+  <a href="https://t.me/SamirTopuphelp" target="_blank" class="floating-help-btn" title="Need Help? Chat with support on Telegram">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  </a>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-bar">
+    <a href="index.html" class="mobile-nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="shop.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Shop</span>
+    </a>
+    <button onclick="openSpinModal()" class="mobile-nav-item" style="background: none; border: none; cursor: pointer; color: #ec4899;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+      <span>Spin</span>
+    </button>
+    <a href="leaderboard.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+      <span>Rank</span>
+    </a>
+    <a href="profile.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <!-- Spin & Win Modal -->
+  <div class="modal-overlay" id="spinModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeSpinModal()">&times;</button>
+      <div class="spin-container">
+        <h3 style="color: #ec4899; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">LUCKY SPIN WHEEL</h3>
+        <div class="spin-header-badges">
+          <span class="spin-price-pill">🪙 স্পিন ফি: <strong>ফ্রী (Free)</strong></span>
+          <span class="spin-balance-pill">👛 ব্যালেন্স: <strong id="spinUserBalance">0 ৳</strong></span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">সম্পূর্ণ ফ্রি স্পিন ঘুরিয়ে ভাগ্য পরীক্ষা করুন! জিতে নিন ক্যাশব্যাক পুরস্কার।</p>
+        
+        <div class="wheel-pointer"></div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+
+        <button id="btnSpinAction" onclick="startSpin()" class="btn-buy-now btn-spin-action">
+          🎰 SPIN NOW (ফ্রি স্পিন)
+        </button>
+
+        <div id="spinResultBox" style="width: 100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcement Modal -->
+  <div class="modal-overlay" id="noticeModal">
+    <div class="modal-card" style="text-align: center;">
+      <button class="modal-close" onclick="closeNoticeModal()">&times;</button>
+      <img src="images/notices/1791115637_home_page_notice.jpg" alt="Notice Banner" style="width: 100%; border-radius: 12px; margin-bottom: 14px;" onerror="this.style.display='none'">
+      <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 8px;">জরুরি বিজ্ঞপ্তি!</h3>
+      <div id="noticeModalMessage" style="color: #cbd5e1; font-size: 14px; line-height: 1.5; margin-bottom: 18px;">
+        আমাদের নতুন অটোমেটেড ওয়ালেট সিস্টেম চালু হয়েছে। ওয়ালেট অ্যাড মানি করে মুহূর্তেই ডায়মন্ড কিনুন!
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <a id="noticeModalBtn" href="https://youtu.be/Viypr4hrDeI?si=mcznSBPMa4H5KX_K" target="_blank" class="btn-buy-now" style="width: auto; padding: 10px 20px;">
+          ভিডিও দেখুন
+        </a>
+        <button onclick="closeNoticeModal()" class="btn-login" style="background: rgba(255,255,255,0.15);">
+          বুঝেছি
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Event / Announcement Popup Modal -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal-card event-modal-card">
+      <button class="modal-close" onclick="closeEventModal()">&times;</button>
+      <div class="event-modal-header-tag">
+        <span class="event-fire-icon">🔥</span> বিশেষ সেবা অফার
+      </div>
+      
+      <div class="event-banner-wrap">
+        <img src="images/event_banner.jpg" alt="Special Event Announcement" class="event-popup-img">
+      </div>
+
+      <div class="event-modal-footer">
+        <div class="event-modal-text">
+          <h4>
+            <span>💖</span> বিশেষ সেবা বিজ্ঞপ্তি
+          </h4>
+          <p>
+            অনুষ্ঠান, আড্ডা বা ঘোরাঘুরির জন্য মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন! সম্পূর্ণ বিশ্বস্ত ও নিরাপদ সেবা।
+          </p>
+        </div>
+
+        <div class="event-modal-buttons">
+          <a href="contactus.html" class="btn-buy-now event-book-btn">
+            <span>বুক করুন এখনই 👉</span>
+          </a>
+          <button onclick="closeEventModal()" class="btn-login event-dismiss-btn">
+            বন্ধ করুন
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/spin.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Timer Countdown Script -->
+  <script>
+    setInterval(() => {
+      const h = document.getElementById("timerHours");
+      const m = document.getElementById("timerMinutes");
+      const s = document.getElementById("timerSeconds");
+      if (!s) return;
+      let sec = parseInt(s.textContent);
+      let min = parseInt(m.textContent);
+      let hrs = parseInt(h.textContent);
+
+      sec--;
+      if (sec < 0) {
+        sec = 59;
+        min--;
+        if (min < 0) {
+          min = 59;
+          hrs = Math.max(0, hrs - 1);
+        }
+      }
+      s.textContent = sec.toString().padStart(2, '0');
+      m.textContent = min.toString().padStart(2, '0');
+      h.textContent = hrs.toString().padStart(2, '0');
+    }, 1000);
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/orders",
+      "destination": "/api/orders.js"
+    },
+    {
+      "source": "/api/auth",
+      "destination": "/api/auth.js"
+    },
+    {
+      "source": "/api/wallet",
+      "destination": "/api/wallet.js"
+    },
+    {
+      "source": "/api/notice",
+      "destination": "/api/notice.js"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "/api/admin.js"
+    },
+    {
+      "source": "/api/settings",
+      "destination": "/api/settings.js"
+    },
+    {
+      "source": "/api/captcha",
+      "destination": "/api/captcha.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+}
+

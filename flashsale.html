@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flash Sale - SAMIR TOPUP</title>
+  <meta name="description" content="Flash Sale discounts on Free Fire Diamonds and gaming subscriptions. Limited time offers!">
+  <meta name="theme-color" content="#042d49">
+  
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body>
+
+  <!-- Notice Ticker Bar -->
+  <div class="top-notice-bar">
+    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-right: 12px; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.3);">
+      NOTICE:
+    </div>
+    <div class="notice-ticker-wrapper">
+      <div id="noticeTickerText" class="notice-ticker-content">
+        যে কোনো সমস্যা হলে দ্রুত আমাদের সাপোর্ট দিন! ২৪/৭ ফাস্ট সার্ভিস। SAMIR TOPUP এর সাথে থাকার জন্য ধন্যবাদ!
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="index.html" class="site-logo">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP Logo">
+        <div class="site-logo-text">
+          <span class="site-logo-title">SAMIR TOPUP</span>
+          <span class="site-logo-subtitle">Fast & Reliable Topup</span>
+        </div>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="shop.html" class="nav-link">Shop</a></li>
+        <li><a href="flashsale.html" class="nav-link active flash-link">⚡ Flash Sale</a></li>
+        <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+        <li><a href="javascript:void(0)" onclick="openEventModal()" class="nav-link event-link"><span class="event-fire-icon">🔥</span> Event <span class="badge-pulse">HOT</span></a></li>
+        <li><a href="contactus.html" class="nav-link">Contact Us</a></li>
+      </ul>
+
+      <div class="header-actions">
+        <button onclick="openEventModal()" class="btn-event-nav" title="Special Event Announcement">
+          <span class="event-fire-icon">🎉</span> Event <span class="badge-pulse">HOT</span>
+        </button>
+        <button onclick="openSpinModal()" class="btn-spin-nav">
+          <span>🎁</span> Spin & Win
+        </button>
+        <div id="authNavArea">
+          <a href="login.html" class="btn-login">Login</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Flash Sale Main Container -->
+  <main class="main-content">
+    
+    <!-- Hero Banner with live timer -->
+    <div class="flashsale-card" style="margin-top: 10px; padding: 24px;">
+      <div class="flashsale-left">
+        <span style="font-size: 38px;">⚡</span>
+        <div>
+          <h1 class="flashsale-title" style="font-size: 26px;">MEGA FLASH SALE DEALS</h1>
+          <p style="font-size: 14px; opacity: 0.95;">Get instant discounts on gaming topups before the timer runs out!</p>
+        </div>
+      </div>
+      <div class="flashsale-timer">
+        <span style="font-size: 14px; font-weight: 700;">HURRY! ENDS IN:</span>
+        <div class="timer-box" id="fsHours">04</div>:
+        <div class="timer-box" id="fsMins">28</div>:
+        <div class="timer-box" id="fsSecs">45</div>
+      </div>
+    </div>
+
+    <!-- Deals Grid -->
+    <div style="margin-top: 30px;">
+      <div class="section-header">
+        <h2 class="section-title">EXCLUSIVE SALE ITEMS</h2>
+      </div>
+
+      <div class="games-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+        <!-- Deal 1 -->
+        <div class="topup-card" style="text-align: center; position: relative;">
+          <span style="position: absolute; top: 12px; left: 12px; background: #ef4444; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">-25% OFF</span>
+          <img src="images/products/1763469001.jpg" alt="Weekly Lite" style="width: 90px; height: 90px; border-radius: 12px; margin: 10px auto; object-fit: cover;">
+          <h3 style="font-size: 16px; font-weight: 700; color: white;">Weekly Lite (BD Server)</h3>
+          <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 10px;">Free Fire Weekly Pass</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px;">
+            <span style="font-size: 18px; font-weight: 800; color: #ff6702;">৳60</span>
+            <span style="font-size: 14px; text-decoration: line-through; color: #64748b;">৳80</span>
+          </div>
+          <a href="topup.html?id=88" class="btn-buy-now" style="padding: 10px; margin-top: 0; font-size: 14px; text-decoration: none;">Claim Deal</a>
+        </div>
+
+        <!-- Deal 2 -->
+        <div class="topup-card" style="text-align: center; position: relative;">
+          <span style="position: absolute; top: 12px; left: 12px; background: #ef4444; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">-15% OFF</span>
+          <img src="images/products/1763469001.jpg" alt="Weekly Membership" style="width: 90px; height: 90px; border-radius: 12px; margin: 10px auto; object-fit: cover;">
+          <h3 style="font-size: 16px; font-weight: 700; color: white;">Weekly Membership</h3>
+          <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 10px;">Full Weekly Rewards</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px;">
+            <span style="font-size: 18px; font-weight: 800; color: #ff6702;">৳145</span>
+            <span style="font-size: 14px; text-decoration: line-through; color: #64748b;">৳170</span>
+          </div>
+          <a href="topup.html?id=1" class="btn-buy-now" style="padding: 10px; margin-top: 0; font-size: 14px; text-decoration: none;">Claim Deal</a>
+        </div>
+
+        <!-- Deal 3 -->
+        <div class="topup-card" style="text-align: center; position: relative;">
+          <span style="position: absolute; top: 12px; left: 12px; background: #ef4444; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">-30% OFF</span>
+          <img src="images/products/1763469001.jpg" alt="Level Up Pass" style="width: 90px; height: 90px; border-radius: 12px; margin: 10px auto; object-fit: cover;">
+          <h3 style="font-size: 16px; font-weight: 700; color: white;">New Level Up Pass</h3>
+          <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 10px;">Instant Diamond Multiplier</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px;">
+            <span style="font-size: 18px; font-weight: 800; color: #ff6702;">৳130</span>
+            <span style="font-size: 14px; text-decoration: line-through; color: #64748b;">৳185</span>
+          </div>
+          <a href="topup.html?id=114" class="btn-buy-now" style="padding: 10px; margin-top: 0; font-size: 14px; text-decoration: none;">Claim Deal</a>
+        </div>
+
+        <!-- Deal 4 -->
+        <div class="topup-card" style="text-align: center; position: relative;">
+          <span style="position: absolute; top: 12px; left: 12px; background: #ef4444; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">-20% OFF</span>
+          <img src="images/products/1763473710.jpg" alt="PUBG 60 UC" style="width: 90px; height: 90px; border-radius: 12px; margin: 10px auto; object-fit: cover;" onerror="this.src='images/products/1763469001.jpg'">
+          <h3 style="font-size: 16px; font-weight: 700; color: white;">PUBG Mobile 60 UC</h3>
+          <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 10px;">Global / BD Server</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px;">
+            <span style="font-size: 18px; font-weight: 800; color: #ff6702;">৳110</span>
+            <span style="font-size: 14px; text-decoration: line-through; color: #64748b;">৳135</span>
+          </div>
+          <a href="topup.html?id=98" class="btn-buy-now" style="padding: 10px; margin-top: 0; font-size: 14px; text-decoration: none;">Claim Deal</a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Spin Modal -->
+  <div class="modal-overlay" id="spinModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeSpinModal()">&times;</button>
+      <div class="spin-container">
+        <h3 style="color: #ec4899; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">LUCKY SPIN WHEEL</h3>
+        <div class="spin-header-badges">
+          <span class="spin-price-pill">🪙 স্পিন ফি: <strong>ফ্রী (Free)</strong></span>
+          <span class="spin-balance-pill">👛 ব্যালেন্স: <strong id="spinUserBalance">0 ৳</strong></span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">সম্পূর্ণ ফ্রি স্পিন ঘুরিয়ে ভাগ্য পরীক্ষা করুন! জিতে নিন ক্যাশব্যাক পুরস্কার।</p>
+        <div class="wheel-pointer"></div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        <button id="btnSpinAction" onclick="startSpin()" class="btn-buy-now btn-spin-action">
+          🎰 SPIN NOW (ফ্রি স্পিন)
+        </button>
+        <div id="spinResultBox" style="width: 100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Event / Announcement Popup Modal -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal-card event-modal-card">
+      <button class="modal-close" onclick="closeEventModal()">&times;</button>
+      <div class="event-modal-header-tag">
+        <span class="event-fire-icon">🔥</span> বিশেষ সেবা অফার
+      </div>
+      
+      <div class="event-banner-wrap">
+        <img src="images/event_banner.jpg" alt="Special Event Announcement" class="event-popup-img">
+      </div>
+
+      <div class="event-modal-footer">
+        <div class="event-modal-text">
+          <h4>
+            <span>💖</span> বিশেষ সেবা বিজ্ঞপ্তি
+          </h4>
+          <p>
+            অনুষ্ঠান, আড্ডা বা ঘোরাঘুরির জন্য মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন! সম্পূর্ণ বিশ্বস্ত ও নিরাপদ সেবা।
+          </p>
+        </div>
+
+        <div class="event-modal-buttons">
+          <a href="contactus.html" class="btn-buy-now event-book-btn">
+            <span>বুক করুন এখনই 👉</span>
+          </a>
+          <button onclick="closeEventModal()" class="btn-login event-dismiss-btn">
+            বন্ধ করুন
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-bottom">
+        <div>© 2026 SAMIR TOPUP. All rights reserved.</div>
+        <div><a href="index.html" style="color: #ff6702; text-decoration: none;">Back to Home</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-bottom-bar">
+    <a href="index.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="shop.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Shop</span>
+    </a>
+    <button onclick="openSpinModal()" class="mobile-nav-item" style="background: none; border: none; cursor: pointer; color: #ec4899;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/></svg>
+      <span>Spin</span>
+    </button>
+    <a href="leaderboard.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/></svg>
+      <span>Rank</span>
+    </a>
+    <a href="profile.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/spin.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    setInterval(() => {
+      const h = document.getElementById("fsHours");
+      const m = document.getElementById("fsMins");
+      const s = document.getElementById("fsSecs");
+      if (!s) return;
+      let sec = parseInt(s.textContent);
+      let min = parseInt(m.textContent);
+      let hrs = parseInt(h.textContent);
+
+      sec--;
+      if (sec < 0) {
+        sec = 59;
+        min--;
+        if (min < 0) {
+          min = 59;
+          hrs = Math.max(0, hrs - 1);
+        }
+      }
+      s.textContent = sec.toString().padStart(2, '0');
+      m.textContent = min.toString().padStart(2, '0');
+      h.textContent = hrs.toString().padStart(2, '0');
+    }, 1000);
+  </script>
+</body>
+</html>
+
+

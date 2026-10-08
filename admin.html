@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Control Center - Samir Topup</title>
+  <meta name="theme-color" content="#031628">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+
+  <!-- Fonts & Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+
+  <style>
+    /* Dedicated Master Admin Dashboard */
+    body {
+      background: #020f1c;
+      color: #e2e8f0;
+      font-family: 'Poppins', 'Hind Siliguri', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-navbar {
+      background: rgba(3, 22, 40, 0.96);
+      border-bottom: 1.5px solid rgba(255, 103, 2, 0.3);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .admin-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .admin-logo-img {
+      height: 38px;
+    }
+
+    .admin-badge {
+      background: linear-gradient(135deg, #ff6702, #e11d48);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.8px;
+    }
+
+    .site-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .status-online {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .status-offline {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .admin-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-site-preview {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-site-preview:hover {
+      background: rgba(56, 189, 248, 0.25);
+      color: white;
+    }
+
+    .btn-admin-logout {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-admin-logout:hover {
+      background: #ef4444;
+      color: white;
+    }
+
+    .admin-container {
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      flex: 1;
+    }
+
+    /* Metric Stats Cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-box {
+      background: #061c31;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-box:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 103, 2, 0.4);
+    }
+    .stat-box-title {
+      font-size: 12.5px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stat-box-num {
+      font-size: 26px;
+      font-weight: 900;
+      color: #fff;
+    }
+    .stat-box.pending-box { border-left: 4px solid #f59e0b; }
+    .stat-box.revenue-box { border-left: 4px solid #10b981; }
+    .stat-box.orders-box { border-left: 4px solid #38bdf8; }
+    .stat-box.users-box { border-left: 4px solid #8b5cf6; }
+
+    /* Tabs */
+    .admin-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 9px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #ff6702, #ea580c);
+      color: #fff;
+      box-shadow: 0 3px 12px rgba(255, 103, 2, 0.35);
+    }
+    .tab-badge {
+      background: rgba(0, 0, 0, 0.35);
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+
+    /* Card Panels */
+    .admin-panel-card {
+      background: #061c31;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 26px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    .panel-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .panel-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-actions-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-search-input {
+      background: #031424;
+      border: 1px solid #1a3a5c;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      outline: none;
+      width: 240px;
+    }
+    .admin-search-input:focus { border-color: #ff6702; }
+
+    .filter-btn-group {
+      display: flex;
+      background: #031424;
+      border: 1px solid #1a3a5c;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .filter-pill {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    .filter-pill.active { background: #ff6702; color: #fff; }
+
+    /* Tables */
+    .table-responsive { width: 100%; overflow-x: auto; }
+    .admin-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    .admin-table th {
+      background: #031424;
+      color: #94a3b8;
+      font-weight: 700;
+      padding: 12px 14px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
+    }
+    .admin-table td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
+    }
+    .admin-table tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+    .status-badge {
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .status-badge.Pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-badge.Processing { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .status-badge.Completed { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-badge.Cancelled { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .btn-act {
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-act-complete { background: #10b981; color: #fff; }
+    .btn-act-complete:hover { background: #059669; }
+    .btn-act-process { background: #0284c7; color: #fff; }
+    .btn-act-process:hover { background: #0369a1; }
+    .btn-act-cancel { background: #dc2626; color: #fff; }
+    .btn-act-cancel:hover { background: #b91c1c; }
+
+    .uid-tag {
+      background: #02162a;
+      border: 1px solid #1a3a5c;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #facc15;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .uid-tag:hover { border-color: #ff6702; }
+
+    /* Form Fields */
+    .admin-form-group { margin-bottom: 18px; }
+    .admin-form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .admin-form-input, .admin-form-textarea, .admin-form-select {
+      width: 100%;
+      background: #031424;
+      border: 1.5px solid #1a3a5c;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .admin-form-input:focus, .admin-form-textarea:focus, .admin-form-select:focus {
+      border-color: #ff6702;
+    }
+
+    /* Maintenance Switch Box */
+    .maintenance-control-box {
+      background: linear-gradient(180deg, rgba(15, 30, 50, 0.9), rgba(5, 18, 32, 0.95));
+      border: 2px solid rgba(255, 103, 2, 0.4);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .switch-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+    .switch-checkbox {
+      width: 50px;
+      height: 26px;
+      accent-color: #ff6702;
+      cursor: pointer;
+      transform: scale(1.3);
+    }
+
+    /* Banner Post Card Grid */
+    .banner-admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .banner-admin-card {
+      background: #031424;
+      border: 1px solid #1a3a5c;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .banner-admin-img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+    .banner-admin-body {
+      padding: 12px 14px;
+    }
+    .banner-admin-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .banner-admin-link {
+      font-size: 12px;
+      color: #38bdf8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 10px;
+    }
+    .banner-admin-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Template Picker */
+    .template-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .template-item-btn {
+      background: #031424;
+      border: 1.5px solid #1a3a5c;
+      border-radius: 12px;
+      padding: 14px;
+      color: #fff;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+    .template-item-btn:hover {
+      border-color: #ff6702;
+      background: rgba(255, 103, 2, 0.08);
+      transform: translateY(-2px);
+    }
+    .template-item-btn h4 {
+      font-size: 13.5px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      color: #ff6702;
+    }
+    .template-item-btn p {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    /* Auth Gate Overlay */
+    #adminAuthGate {
+      position: fixed;
+      inset: 0;
+      background: #020b14;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .admin-login-card {
+      background: #061c31;
+      border: 1.5px solid rgba(255, 103, 2, 0.4);
+      border-radius: 20px;
+      padding: 34px 28px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    @media (max-width: 768px) {
+      .admin-navbar {
+        padding: 10px 14px;
+      }
+      .admin-container {
+        padding: 14px 10px 60px;
+      }
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+      }
+      .stat-box {
+        padding: 12px 14px;
+      }
+      .stat-box-num {
+        font-size: 22px;
+      }
+      .panel-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .admin-search-box {
+        width: 100%;
+      }
+      .admin-search-input {
+        width: 100% !important;
+      }
+      .admin-tabs {
+        padding-bottom: 8px;
+        gap: 6px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tab-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Admin Login Auth Gate Modal -->
+  <div id="adminAuthGate">
+    <div class="admin-login-card">
+      <img src="images/samir_logo.svg" alt="Samir Topup" style="height: 52px; margin-bottom: 14px;">
+      <h2 style="color: #fff; font-size: 20px; font-weight: 800; margin-bottom: 4px;">ADMIN CONTROL PORTAL</h2>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 22px;">Manage orders, maintenance mode, banners & announcements</p>
+
+      <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
+        <div class="admin-form-group" style="text-align: left;">
+          <label class="admin-form-label">Admin Username</label>
+          <input type="text" id="adminUsername" class="admin-form-input" placeholder="Enter admin username" required autocomplete="username">
+        </div>
+        <div class="admin-form-group" style="text-align: left;">
+          <label class="admin-form-label">Password</label>
+          <input type="password" id="adminPassword" class="admin-form-input" placeholder="Enter secure admin password" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="adminLoginBtn" class="btn-buy-now" style="width: 100%; margin-top: 10px; padding: 12px;">
+          <span>🔐 Login to Dashboard</span>
+        </button>
+      </form>
+      <div id="adminLoginErr" style="color: #f87171; font-size: 13px; margin-top: 12px; display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Admin Header Navbar -->
+  <header class="admin-navbar">
+    <a href="admin.html" class="admin-brand">
+      <img src="images/samir_logo.svg" alt="Samir Topup" class="admin-logo-img">
+      <span class="admin-badge">ADMIN CONTROL</span>
+    </a>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="siteStatusPill" class="site-status-pill status-online">
+        <span style="width:8px; height:8px; background:#10b981; border-radius:50%; display:inline-block;"></span>
+        Site Online
+      </span>
+      <span id="liveTimeClock" style="font-size: 13px; color: #94a3b8; font-weight: 600;"></span>
+    </div>
+
+    <div class="admin-nav-actions">
+      <a href="index.html" target="_blank" class="btn-site-preview">
+        <span>👁️ Visit Live Shop</span>
+      </a>
+      <button onclick="logoutAdmin()" class="btn-admin-logout">
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="admin-container">
+    
+    <!-- Metric Stats Row -->
+    <div class="stats-row">
+      <div class="stat-box orders-box">
+        <div class="stat-box-title">
+          <span>Total Orders</span>
+          <span>📦</span>
+        </div>
+        <div class="stat-box-num" id="statTotalOrders">0</div>
+      </div>
+
+      <div class="stat-box pending-box">
+        <div class="stat-box-title">
+          <span>Pending Orders</span>
+          <span>⏳</span>
+        </div>
+        <div class="stat-box-num" id="statPendingOrders" style="color: #f59e0b;">0</div>
+      </div>
+
+      <div class="stat-box revenue-box">
+        <div class="stat-box-title">
+          <span>Total Sales / Revenue</span>
+          <span>💰</span>
+        </div>
+        <div class="stat-box-num" id="statTotalRevenue">0 ৳</div>
+      </div>
+
+      <div class="stat-box users-box">
+        <div class="stat-box-title">
+          <span>Registered Users</span>
+          <span>👥</span>
+        </div>
+        <div class="stat-box-num" id="statTotalUsers">0</div>
+      </div>
+
+      <div class="stat-box pending-box">
+        <div class="stat-box-title">
+          <span>Wallet Deposit Req</span>
+          <span>💳</span>
+        </div>
+        <div class="stat-box-num" id="statWalletReqs" style="color: #38bdf8;">0</div>
+      </div>
+    </div>
+
+    <!-- Admin Tabs Bar -->
+    <div class="admin-tabs">
+      <button class="tab-btn active" onclick="switchTab('orders', this)">
+        <span>📦 Orders</span>
+        <span class="tab-badge" id="tabBadgeOrders">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('maintenance', this)">
+        <span>🛠️ Site Status & Maintenance</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('announcements', this)">
+        <span>📢 Notice & Templates</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('banners', this)">
+        <span>🖼️ Banner Post / Carousel</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('payments', this)">
+        <span>💳 Payment Numbers</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('wallet', this)">
+        <span>👛 Wallet Requests</span>
+        <span class="tab-badge" id="tabBadgeWallet">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('spin_sale', this)">
+        <span>🎡 Spin & Flash Sale</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('users', this)">
+        <span>👥 Users</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('socials', this)">
+        <span>💬 Helpline & Socials</span>
+      </button>
+    </div>
+
+    <!-- 1. Orders Management Panel -->
+    <div id="panelOrders" class="admin-panel-card">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>📦 Orders Management</span>
+        </div>
+
+        <div class="panel-actions-row">
+          <div class="filter-btn-group">
+            <button class="filter-pill active" onclick="filterOrderStatus('all', this)">All</button>
+            <button class="filter-pill" onclick="filterOrderStatus('Pending', this)">Pending</button>
+            <button class="filter-pill" onclick="filterOrderStatus('Processing', this)">Processing</button>
+            <button class="filter-pill" onclick="filterOrderStatus('Completed', this)">Completed</button>
+            <button class="filter-pill" onclick="filterOrderStatus('Cancelled', this)">Cancelled</button>
+          </div>
+
+          <input type="text" id="orderSearchInput" class="admin-search-input" placeholder="Search ID, UID, Phone..." oninput="handleOrderSearch()">
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date & Time</th>
+              <th>Customer</th>
+              <th>Game & Item</th>
+              <th>Player UID</th>
+              <th>Payment</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. Site Status & Maintenance Mode Panel -->
+    <div id="panelMaintenance" class="admin-panel-card" style="display: none; max-width: 860px;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>🛠️ Site Status & Maintenance Mode (অফলাইন/মেইনটেনেন্স কন্ট্রোল)</span>
+        </div>
+      </div>
+
+      <div class="maintenance-control-box">
+        <div>
+          <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px;">সাইট মেইনটেনেন্স মোড (Site Maintenance Switch)</h3>
+          <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.5;">
+            মেইনটেনেন্স মোড চালু করলে ভিজিটরদের কাছে সাইট সাময়িকভাবে লক হয়ে যাবে এবং ফুল-স্ক্রিন মেইনটেনেন্স স্ক্রিন দেখাবে। অ্যাডমিন প্যানেল সবসময় চালু থাকবে।
+          </p>
+        </div>
+        <label class="switch-toggle-label">
+          <input type="checkbox" id="maintenanceToggleCheckbox" class="switch-checkbox" onchange="toggleMaintenanceMode(this.checked)">
+          <span id="maintenanceToggleText" style="font-size: 14px; font-weight: 800; color: #34d399;">Site is ONLINE</span>
+        </label>
+      </div>
+
+      <form id="maintenanceForm" onsubmit="saveMaintenanceSettings(event)">
+        <div class="admin-form-group">
+          <label class="admin-form-label">মেইনটেনেন্স নোটিশ বার্তা (Maintenance Message for Users)</label>
+          <textarea id="inputMaintenanceMsg" class="admin-form-textarea" rows="4" required>সম্মানিত গ্রাহক, সাইটের সার্ভার আপগ্রেডেশনের কাজ চলছে। খুব দ্রুতই সেবা পুনরায় চালু হবে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।</textarea>
+        </div>
+
+        <div class="admin-form-group">
+          <label class="admin-form-label">সম্ভাব্য শেষ হওয়ার সময় (Estimated Completion Time / ETA)</label>
+          <input type="text" id="inputMaintenanceEta" class="admin-form-input" value="Estimated 30 Minutes" placeholder="e.g. 30 Minutes / 2 Hours">
+        </div>
+
+        <button type="submit" class="btn-buy-now" style="width: auto; padding: 12px 28px;">
+          <span>💾 Save Maintenance Settings</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- 3. Announcement Text & Pre-made Templates Panel -->
+    <div id="panelAnnouncements" class="admin-panel-card" style="display: none; max-width: 900px;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>📢 Announcement Texts & 1-Click Templates</span>
+        </div>
+      </div>
+
+      <!-- Quick Template Selection -->
+      <h4 style="font-size: 14px; color: #cbd5e1; font-weight: 700; margin-bottom: 10px;">⚡ 1-Click Pre-made Templates (ক্লিক করলেই ফিল্ড পূরণ হবে):</h4>
+      <div class="template-card-grid">
+        <div class="template-item-btn" onclick="applyAnnouncementTemplate('maintenance')">
+          <h4>🛠️ সার্ভার মেইনটেনেন্স</h4>
+          <p>জরুরি আপগ্রেড ও সাময়িক সময়ের নোটিশ টেমপ্লেট।</p>
+        </div>
+        <div class="template-item-btn" onclick="applyAnnouncementTemplate('flashsale')">
+          <h4>⚡ ধামাকা ফ্ল্যাশ সেল</h4>
+          <p>ডিসকাউন্ট ও বিশেষ ডায়মন্ড অফারের টেমপ্লেট।</p>
+        </div>
+        <div class="template-item-btn" onclick="applyAnnouncementTemplate('wallet')">
+          <h4>💳 অটো ওয়ালেট সার্ভিস</h4>
+          <p>বিকাশ/নগদ অটো অ্যাড মানি নোটিশ টেমপ্লেট।</p>
+        </div>
+        <div class="template-item-btn" onclick="applyAnnouncementTemplate('event')">
+          <h4>💖 বিশেষ সেবা ইভেন্ট</h4>
+          <p>গার্লফ্রেন্ড ভাড়া ও বিশেষ ইভেন্ট নোটিশ টেমপ্লেট।</p>
+        </div>
+      </div>
+
+      <form id="announcementForm" onsubmit="saveAnnouncementSettings(event)">
+        <!-- Top Scrolling Ticker -->
+        <div class="admin-form-group">
+          <label class="admin-form-label">১. টপ স্ক্রোলিং টিকার নোটিশ (Top Scrolling Notice Bar)</label>
+          <input type="text" id="annTickerText" class="admin-form-input" required>
+        </div>
+
+        <!-- Popup Notice Modal -->
+        <h4 style="font-size: 15px; color: #fff; font-weight: 800; margin: 22px 0 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+          ২. জরুরি পপ-আপ মডাল সেটিংস (Home Popup Modal)
+        </h4>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">পপ-আপ শিরোনাম (Title)</label>
+            <input type="text" id="annPopupTitle" class="admin-form-input" required>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">পপ-আপ বাটন টেক্সট</label>
+            <input type="text" id="annPopupBtnText" class="admin-form-input">
+          </div>
+        </div>
+
+        <div class="admin-form-group">
+          <label class="admin-form-label">পপ-আপ বার্তা (Popup Message)</label>
+          <textarea id="annPopupMsg" class="admin-form-textarea" rows="3" required></textarea>
+        </div>
+
+        <div class="admin-form-group">
+          <label class="admin-form-label">পপ-আপ বাটন লিংক (Button Link)</label>
+          <input type="text" id="annPopupBtnLink" class="admin-form-input" placeholder="e.g. shop.html or external link">
+        </div>
+
+        <!-- Special Header Event Strip -->
+        <h4 style="font-size: 15px; color: #fff; font-weight: 800; margin: 22px 0 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+          ৩. হেডারের নিচের বিশেষ ইভেন্ট স্ট্রিপ (Event Strip Below Header)
+        </h4>
+
+        <div style="display: flex; gap: 16px; margin-bottom: 12px; align-items: center;">
+          <label style="font-size: 13.5px; font-weight: 700; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="annEventStripToggle" checked style="accent-color: #ff6702; transform: scale(1.2);">
+            ইভেন্ট স্ট্রিপ চালু রাখুন (Show Event Strip)
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 180px 1fr 180px; gap: 14px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">ট্যাগ টেক্সট</label>
+            <input type="text" id="annEventTag" class="admin-form-input" value="📢 বিশেষ বিজ্ঞপ্তি">
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">হেডলাইন বার্তা (Headline)</label>
+            <input type="text" id="annEventTitle" class="admin-form-input" value="এখানে গার্লফ্রেন্ড ভাড়া পাওয়া যায়! মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন">
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">বাটন টেক্সট</label>
+            <input type="text" id="annEventBtnText" class="admin-form-input" value="বুক করুন এখনই 👉">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-buy-now" style="width: auto; padding: 12px 28px; margin-top: 10px;">
+          <span>💾 Save All Announcement Settings</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- 4. Carousel Banner Manager Panel -->
+    <div id="panelBanners" class="admin-panel-card" style="display: none;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>🖼️ Carousel Banners Manager (ব্যানার পোস্ট ও স্লাইডার)</span>
+        </div>
+      </div>
+
+      <!-- Add New Banner Form -->
+      <div style="background: #031424; border: 1.5px solid #1a3a5c; border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+        <h4 style="font-size: 15px; font-weight: 800; color: #ff6702; margin-bottom: 14px;">+ নতুন ব্যানার পোস্ট করুন (Add New Carousel Banner)</h4>
+        <form id="addBannerForm" onsubmit="handleAddNewBanner(event)">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+            <div class="admin-form-group">
+              <label class="admin-form-label">ব্যানার টাইটেল / ক্যাপশন</label>
+              <input type="text" id="newBannerTitle" class="admin-form-input" placeholder="e.g. Free Fire Flash Sale" required>
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-form-label">ব্যানার ইমেজ পাথ / URL</label>
+              <input type="text" id="newBannerImage" class="admin-form-input" placeholder="e.g. images/banners/1791115595.jpg" required>
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-form-label">ক্লিক টার্গেট লিংক (Click Link)</label>
+              <input type="text" id="newBannerLink" class="admin-form-input" placeholder="e.g. topup.html?id=1 or flashsale.html">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="submit" class="btn-buy-now" style="width: auto; padding: 10px 22px;">
+              <span>➕ Add Banner to Slider</span>
+            </button>
+            <button type="button" onclick="selectLocalPresetBanner()" class="btn-login" style="padding: 10px 16px; font-size: 13px;">
+              📁 চুজ লোকাল প্রিসেট ব্যানার
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Current Banners List -->
+      <h4 style="font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 12px;">বর্তমান অ্যাক্টিভ ব্যানারসমূহ:</h4>
+      <div id="adminBannersContainer" class="banner-admin-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- 5. Payment Numbers Manager Panel -->
+    <div id="panelPayments" class="admin-panel-card" style="display: none; max-width: 800px;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>💳 Payment Numbers & Gateway Manager (বিকাশ ও নগদ নম্বর)</span>
+        </div>
+      </div>
+      <p style="font-size: 13.5px; color: #94a3b8; margin-bottom: 20px;">
+        এখানে নম্বর পরিবর্তন করলে কাস্টমাররা চেকআউট ও ওয়ালেট রিচার্জ পেজে সরাসরি এই নম্বরগুলো দেখতে পাবে।
+      </p>
+
+      <form id="paymentNumbersForm" onsubmit="savePaymentNumbers(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">bKash নম্বর (Send Money Number)</label>
+            <input type="text" id="payBkashNum" class="admin-form-input" value="01700000000" required>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">bKash একাউন্ট টাইপ</label>
+            <select id="payBkashType" class="admin-form-select">
+              <option value="Personal (Send Money)">Personal (Send Money)</option>
+              <option value="Merchant (Payment)">Merchant (Payment)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">Nagad নম্বর (Send Money Number)</label>
+            <input type="text" id="payNagadNum" class="admin-form-input" value="01800000000" required>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">Nagad একাউন্ট টাইপ</label>
+            <select id="payNagadType" class="admin-form-select">
+              <option value="Personal (Send Money)">Personal (Send Money)</option>
+              <option value="Merchant (Payment)">Merchant (Payment)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">Rocket নম্বর</label>
+            <input type="text" id="payRocketNum" class="admin-form-input" value="01900000000">
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">মিনিমাম ওয়ালেট ডিপোজিট (৳)</label>
+            <input type="number" id="payMinDeposit" class="admin-form-input" value="50">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-buy-now" style="width: auto; padding: 12px 28px;">
+          <span>💾 Save Payment Numbers</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- 6. Wallet Requests Panel -->
+    <div id="panelWallet" class="admin-panel-card" style="display: none;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>👛 Manual Wallet Deposit Requests (বিকাশ/নগদ অ্যাড মানি)</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Req ID</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Method</th>
+              <th>TrxID</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="walletTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 7. Spin Wheel & Flash Sale Panel -->
+    <div id="panelSpinSale" class="admin-panel-card" style="display: none; max-width: 800px;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>🎡 Lucky Spin & Flash Sale Controller</span>
+        </div>
+      </div>
+
+      <form id="spinSaleForm" onsubmit="saveSpinSaleSettings(event)">
+        <h4 style="font-size: 15px; color: #fff; font-weight: 800; margin-bottom: 12px;">লাকি স্পিন হুইল সেটিংস (Lucky Spin Wheel):</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">স্পিন খরচ (Spin Cost per round in ৳)</label>
+            <input type="number" id="spinCostInput" class="admin-form-input" value="5" min="1" required>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">স্পিন হুইল স্ট্যাটাস</label>
+            <select id="spinStatusSelect" class="admin-form-select">
+              <option value="true">Active (সবার জন্য চালু)</option>
+              <option value="false">Disabled (বন্ধ রাখুন)</option>
+            </select>
+          </div>
+        </div>
+
+        <h4 style="font-size: 15px; color: #fff; font-weight: 800; margin: 24px 0 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+          ফ্ল্যাশ সেল সেটিংস (Flash Sale Countdown):
+        </h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-form-group">
+            <label class="admin-form-label">ফ্ল্যাশ সেল টেক্সট</label>
+            <input type="text" id="flashSaleText" class="admin-form-input" value="Weekly Lite Flash Sale">
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">ফ্ল্যাশ সেল স্ট্যাটাস</label>
+            <select id="flashSaleStatus" class="admin-form-select">
+              <option value="true">Active (চলমান)</option>
+              <option value="false">Inactive (লুকিয়ে রাখুন)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-buy-now" style="width: auto; padding: 12px 28px;">
+          <span>💾 Save Spin & Sale Settings</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- 8. User Management Panel -->
+    <div id="panelUsers" class="admin-panel-card" style="display: none;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>👥 Registered Users List</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Name</th>
+              <th>Phone / Email</th>
+              <th>Wallet Balance</th>
+              <th>Total Spend</th>
+              <th>Role</th>
+              <th>Adjust Balance</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 9. Helpline & Socials Panel -->
+    <div id="panelSocials" class="admin-panel-card" style="display: none; max-width: 800px;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>💬 Helpline, WhatsApp & Social Links</span>
+        </div>
+      </div>
+
+      <form id="socialsForm" onsubmit="saveSocialSettings(event)">
+        <div class="admin-form-group">
+          <label class="admin-form-label">Telegram Support Link (টেলিগ্রাম হেল্পলাইন লিংক)</label>
+          <input type="text" id="socTelegramLink" class="admin-form-input" value="https://t.me/samirtopup">
+        </div>
+
+        <div class="admin-form-group">
+          <label class="admin-form-label">WhatsApp Number / Link</label>
+          <input type="text" id="socWhatsappNum" class="admin-form-input" value="+8801700000000">
+        </div>
+
+        <div class="admin-form-group">
+          <label class="admin-form-label">Helpline Phone Number (কল সাপোর্ট)</label>
+          <input type="text" id="socHelpPhone" class="admin-form-input" value="01700000000">
+        </div>
+
+        <button type="submit" class="btn-buy-now" style="width: auto; padding: 12px 28px;">
+          <span>💾 Save Helpline Settings</span>
+        </button>
+      </form>
+    </div>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  
+  <script>
+    // State
+    let adminOrders = [];
+    let adminWalletReqs = [];
+    let adminUsers = [];
+    let adminBanners = [];
+    let siteSettings = {};
+    let activeFilter = 'all';
+
+    // Live Clock
+    function updateClock() {
+      const el = document.getElementById("liveTimeClock");
+      if (el) {
+        const now = new Date();
+        el.textContent = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-US');
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Check Admin Auth with Server-Side Verification
+    async function checkAuth() {
+      const token = sessionStorage.getItem("samirtopup_admin_token");
+      const gate = document.getElementById("adminAuthGate");
+
+      if (!token) {
+        gate.style.display = "flex";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/admin?action=verify", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        const data = await res.json();
+        if (res.ok && data.valid) {
+          gate.style.display = "none";
+          await loadDashboardData();
+        } else {
+          sessionStorage.removeItem("samirtopup_admin_token");
+          sessionStorage.removeItem("samirtopup_admin_logged");
+          gate.style.display = "flex";
+          const err = document.getElementById("adminLoginErr");
+          if (err) {
+            err.textContent = "অ্যাডমিন সেশনের মেয়াদ শেষ হয়েছে বা অবৈধ! পুনরায় লগইন করুন।";
+            err.style.display = "block";
+          }
+        }
+      } catch (e) {
+        // Fallback for standalone offline dev
+        gate.style.display = "none";
+        loadDashboardData();
+      }
+    }
+
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById("adminUsername").value.trim();
+      const p = document.getElementById("adminPassword").value.trim();
+      const err = document.getElementById("adminLoginErr");
+      const btn = document.getElementById("adminLoginBtn");
+
+      if (!u || !p) {
+        err.textContent = "ইউজারনেম এবং পাসওয়ার্ড দিন!";
+        err.style.display = "block";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = "<span>⏳ ভেরিফাই করা হচ্ছে...</span>";
+      err.style.display = "none";
+
+      try {
+        const res = await fetch("/api/admin?action=login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success && data.token) {
+          sessionStorage.setItem("samirtopup_admin_token", data.token);
+          sessionStorage.setItem("samirtopup_admin_logged", "true");
+          if (data.admin) sessionStorage.setItem("samirtopup_admin_profile", JSON.stringify(data.admin));
+          await checkAuth();
+        } else if (res.status === 429) {
+          err.textContent = data.error || "অতিরিক্ত ভুল চেষ্টার কারণে অ্যাডমিন সাময়িকভাবে লক করা হয়েছে!";
+          err.style.display = "block";
+        } else {
+          err.textContent = data.error || "ভুল অ্যাডমিন ইউজারনেম বা পাসওয়ার্ড!";
+          err.style.display = "block";
+        }
+      } catch (ex) {
+        // Standalone offline fallback
+        if ((u === "admin" && p === "admin123") || (u === "samir" && p === "samir123")) {
+          sessionStorage.setItem("samirtopup_admin_logged", "true");
+          sessionStorage.setItem("samirtopup_admin_token", "offline_admin_" + Date.now());
+          document.getElementById("adminAuthGate").style.display = "none";
+          loadDashboardData();
+        } else {
+          err.textContent = "ভুল ইউজারনেম বা পাসওয়ার্ড!";
+          err.style.display = "block";
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = "<span>🔐 Login to Dashboard</span>";
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem("samirtopup_admin_token");
+      sessionStorage.removeItem("samirtopup_admin_logged");
+      sessionStorage.removeItem("samirtopup_admin_profile");
+      window.location.reload();
+    }
+
+    // Load All Dashboard Data
+    async function loadDashboardData() {
+      const token = sessionStorage.getItem("samirtopup_admin_token");
+      const authHeaders = token ? { "Authorization": "Bearer " + token } : {};
+
+      // 1. Load settings
+      siteSettings = API.getSettings();
+      updateMaintenancePill();
+
+      // 2. Load banners
+      adminBanners = await API.getBanners();
+      renderAdminBanners();
+
+      // 3. Load orders & users from API or Local
+      try {
+        const res = await fetch("/api/admin", { headers: authHeaders });
+        if (res.ok) {
+          const data = await res.json();
+          adminOrders = data.recentOrders || [];
+          adminUsers = data.users || [];
+          if (data.stats) {
+            document.getElementById("statTotalOrders").textContent = data.stats.totalOrders || 0;
+            document.getElementById("statPendingOrders").textContent = data.stats.pendingOrders || 0;
+            document.getElementById("statProcessingOrders").textContent = data.stats.processingOrders || 0;
+            document.getElementById("statCompletedOrders").textContent = data.stats.completedOrders || 0;
+            document.getElementById("statTotalRevenue").textContent = "৳" + (data.stats.totalRevenue || 0).toLocaleString();
+            document.getElementById("statTotalUsers").textContent = data.stats.totalUsers || 0;
+            document.getElementById("statPendingReqs").textContent = data.stats.pendingWalletReqs || 0;
+          }
+        }
+      } catch (e) {}
+
+      if (adminOrders.length === 0) {
+        adminOrders = API.getOrders();
+      }
+
+      adminWalletReqs = JSON.parse(localStorage.getItem("samirtopup_wallet_requests") || "[]");
+      if (adminWalletReqs.length === 0) {
+        adminWalletReqs = [
+          { id: "REQ-101", user_name: "Tanvir Hasan", phone: "01822334455", amount: 500, method: "bKash", trxId: "BK992A819K", status: "Pending", date: "Just now" },
+          { id: "REQ-100", user_name: "Shuvo Ahmed", phone: "01933445566", amount: 300, method: "Nagad", trxId: "NG8290192L", status: "Approved", date: "2 hrs ago" }
+        ];
+        localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(adminWalletReqs));
+      }
+
+      adminUsers = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
+      if (adminUsers.length === 0) {
+        adminUsers = [
+          { id: 1001, name: "Tanvir Hasan", phone: "01822334455", email: "tanvir@gamer.com", balance: 450, total_spend: 3200, role: "user" },
+          { id: 1002, name: "Shuvo Ahmed", phone: "01933445566", email: "shuvo@gamer.com", balance: 120, total_spend: 1850, role: "user" },
+          { id: 1003, name: "Nabil Gamer", phone: "01655667788", email: "nabil@gamer.com", balance: 80, total_spend: 4120, role: "user" }
+        ];
+        localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
+      }
+
+      updateMetrics();
+      renderOrdersTable();
+      renderWalletTable();
+      renderUsersTable();
+      populateFormFields();
+    }
+
+    function updateMaintenancePill() {
+      const pill = document.getElementById("siteStatusPill");
+      const checkbox = document.getElementById("maintenanceToggleCheckbox");
+      const text = document.getElementById("maintenanceToggleText");
+
+      if (siteSettings.maintenance_mode) {
+        pill.className = "site-status-pill status-offline";
+        pill.innerHTML = `<span style="width:8px; height:8px; background:#ef4444; border-radius:50%; display:inline-block;"></span> ⚠️ Maintenance Mode`;
+        if (checkbox) checkbox.checked = true;
+        if (text) { text.textContent = "Site is in MAINTENANCE MODE"; text.style.color = "#f87171"; }
+      } else {
+        pill.className = "site-status-pill status-online";
+        pill.innerHTML = `<span style="width:8px; height:8px; background:#10b981; border-radius:50%; display:inline-block;"></span> Site Online`;
+        if (checkbox) checkbox.checked = false;
+        if (text) { text.textContent = "Site is ONLINE"; text.style.color = "#34d399"; }
+      }
+    }
+
+    function toggleMaintenanceMode(isMaintenance) {
+      siteSettings.maintenance_mode = isMaintenance;
+      API.saveSettings(siteSettings);
+      updateMaintenancePill();
+      alert(isMaintenance ? "🔴 Site is now in MAINTENANCE MODE! Regular visitors will see maintenance screen." : "🟢 Site is now ONLINE! Store is fully open.");
+    }
+
+    function saveMaintenanceSettings(e) {
+      e.preventDefault();
+      siteSettings.maintenance_message = document.getElementById("inputMaintenanceMsg").value;
+      siteSettings.maintenance_eta = document.getElementById("inputMaintenanceEta").value;
+      API.saveSettings(siteSettings);
+      alert("✅ Maintenance message and ETA updated successfully!");
+    }
+
+    // Populate all form fields
+    function populateFormFields() {
+      // Announcements
+      document.getElementById("annTickerText").value = siteSettings.maintenance_message ? siteSettings.notice_ticker || "Samir Topup এ স্বাগতম! ২৪/৭ ফাস্ট অটো ডেলিভারি। বিকাশ, নগদ ও ওয়ালেট দিয়ে মুহূর্তেই ডায়মন্ড কিনুন!" : "";
+      document.getElementById("annPopupTitle").value = "জরুরি বিজ্ঞপ্তি!";
+      document.getElementById("annPopupMsg").value = "Samir Topup এ ১০০% ফাস্ট ও নিরাপদ অটোমেটেড গেমিং টপআপ সেবা চালু হয়েছে।";
+      document.getElementById("annPopupBtnText").value = "অফার দেখুন";
+      document.getElementById("annPopupBtnLink").value = "shop.html";
+
+      document.getElementById("annEventStripToggle").checked = siteSettings.event_strip_active !== false;
+      document.getElementById("annEventTag").value = siteSettings.event_strip_tag || "📢 বিশেষ বিজ্ঞপ্তি";
+      document.getElementById("annEventTitle").value = siteSettings.event_strip_title || "এখানে গার্লফ্রেন্ড ভাড়া পাওয়া যায়! মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন";
+      document.getElementById("annEventBtnText").value = siteSettings.event_strip_btn || "বুক করুন এখনই 👉";
+
+      // Payment numbers
+      document.getElementById("payBkashNum").value = siteSettings.bkash_number || "01700000000";
+      document.getElementById("payBkashType").value = siteSettings.bkash_type || "Personal (Send Money)";
+      document.getElementById("payNagadNum").value = siteSettings.nagad_number || "01800000000";
+      document.getElementById("payNagadType").value = siteSettings.nagad_type || "Personal (Send Money)";
+      document.getElementById("payRocketNum").value = siteSettings.rocket_number || "01900000000";
+
+      // Spin & Flash Sale
+      document.getElementById("spinCostInput").value = siteSettings.spin_cost || 5;
+      document.getElementById("spinStatusSelect").value = siteSettings.spin_enabled !== false ? "true" : "false";
+      document.getElementById("flashSaleText").value = siteSettings.flashsale_text || "Weekly Lite Flash Sale";
+      document.getElementById("flashSaleStatus").value = siteSettings.flashsale_active !== false ? "true" : "false";
+
+      // Socials
+      document.getElementById("socTelegramLink").value = siteSettings.telegram_link || "https://t.me/samirtopup";
+      document.getElementById("socWhatsappNum").value = siteSettings.whatsapp_number || "+8801700000000";
+    }
+
+    // 1-Click Template Applicator
+    function applyAnnouncementTemplate(type) {
+      if (type === 'maintenance') {
+        document.getElementById("annTickerText").value = "⚠️ জরুরি নোটিশ: আজ রাত ১২টা থেকে সার্ভার মেইনটেনেন্স চলবে। সাময়িক অসুবিধার জন্য দুঃখিত।";
+        document.getElementById("annPopupTitle").value = "🛠️ সার্ভার আপগ্রেডেশন নোটিশ!";
+        document.getElementById("annPopupMsg").value = "আমাদের সার্ভার উন্নত করার কাজ চলছে। খুব শীঘ্রই সুপার ফাস্ট ডেলিভারিসহ নতুন ফিচার আসছে। সাথে থাকুন!";
+        document.getElementById("annPopupBtnText").value = "হেল্পলাইনে মেসেজ দিন";
+        document.getElementById("annPopupBtnLink").value = "contactus.html";
+      } else if (type === 'flashsale') {
+        document.getElementById("annTickerText").value = "🔥 ধামাকা অফার: মাত্র ৪২ টাকায় উইকলি লাইট ও বিশেষ মূল্যে ফ্রি ফায়ার ডায়মন্ড টপআপ চলছে!";
+        document.getElementById("annPopupTitle").value = "⚡ WEEKLY LITE FLASH SALE!";
+        document.getElementById("annPopupMsg").value = "সীমিত সময়ের জন্য অবিশ্বাস্য ডিসকাউন্টে ফ্রি ফায়ার টপআপ নিন। স্টক শেষ হওয়ার আগেই বুক করুন!";
+        document.getElementById("annPopupBtnText").value = "অফার লুফে নিন";
+        document.getElementById("annPopupBtnLink").value = "flashsale.html";
+      } else if (type === 'wallet') {
+        document.getElementById("annTickerText").value = "💳 বিকাশ ও নগদ ইনস্ট্যান্ট অ্যাড মানি চালু হয়েছে। ওয়ালেট ব্যালেন্স দিয়ে ১ ক্লিকে ডায়মন্ড কিনুন!";
+        document.getElementById("annPopupTitle").value = "🪙 অটোমেটেড ওয়ালেট সিস্টেম!";
+        document.getElementById("annPopupMsg").value = "আপনার একাউন্টে টাকা যুক্ত করে রাখুন এবং কোনো বাড়তি ঝামেলা ছাড়াই প্রতিবার মুহূর্তে ডায়মন্ড টপআপ করুন।";
+        document.getElementById("annPopupBtnText").value = "ব্যালেন্স যোগ করুন";
+        document.getElementById("annPopupBtnLink").value = "profile.html";
+      } else if (type === 'event') {
+        document.getElementById("annTickerText").value = "💖 বিশেষ সেবা অফার: এখানে গার্লফ্রেন্ড ভাড়া পাওয়া যায়! মনের মতো সঙ্গী ভাড়া নিন।";
+        document.getElementById("annPopupTitle").value = "📢 বিশেষ সেবা বিজ্ঞপ্তি!";
+        document.getElementById("annPopupMsg").value = "অনুষ্ঠান, আড্ডা বা ঘোরাঘুরির জন্য মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন! সম্পূর্ণ বিশ্বস্ত ও নিরাপদ সেবা।";
+        document.getElementById("annPopupBtnText").value = "বুক করুন এখনই 👉";
+        document.getElementById("annPopupBtnLink").value = "contactus.html";
+      }
+      alert(`Applied "${type.toUpperCase()}" template! Click "Save" below to apply it live.`);
+    }
+
+    function saveAnnouncementSettings(e) {
+      e.preventDefault();
+      siteSettings.notice_ticker = document.getElementById("annTickerText").value;
+      siteSettings.event_strip_active = document.getElementById("annEventStripToggle").checked;
+      siteSettings.event_strip_tag = document.getElementById("annEventTag").value;
+      siteSettings.event_strip_title = document.getElementById("annEventTitle").value;
+      siteSettings.event_strip_btn = document.getElementById("annEventBtnText").value;
+
+      API.saveSettings(siteSettings);
+
+      const customNotice = {
+        notice: siteSettings.notice_ticker,
+        home_page_notice_message: document.getElementById("annPopupMsg").value,
+        home_page_notice_button_text: document.getElementById("annPopupBtnText").value,
+        home_page_notice_button_link: document.getElementById("annPopupBtnLink").value
+      };
+      localStorage.setItem("samirtopup_custom_notice", JSON.stringify(customNotice));
+
+      alert("✅ Announcements, Ticker, and Event Strip updated live!");
+    }
+
+    // Banner Post & Carousel Management
+    function renderAdminBanners() {
+      const container = document.getElementById("adminBannersContainer");
+      container.innerHTML = "";
+
+      adminBanners.forEach((b, idx) => {
+        const card = document.createElement("div");
+        card.className = "banner-admin-card";
+        card.innerHTML = `
+          <img src="${b.image || b.logo}" onerror="this.src='images/banners/1791115595.jpg'" class="banner-admin-img">
+          <div class="banner-admin-body">
+            <div class="banner-admin-title">${b.title || `Slide ${idx + 1}`}</div>
+            <div class="banner-admin-link">🔗 ${b.link || 'Event Popup'}</div>
+            <div class="banner-admin-actions">
+              <span style="font-size: 11px; font-weight: 700; color: ${b.active !== false ? '#34d399' : '#f87171'};">
+                ${b.active !== false ? '● Active' : '● Hidden'}
+              </span>
+              <div style="display: flex; gap: 6px;">
+                <button onclick="toggleBannerActive(${idx})" class="btn-act ${b.active !== false ? 'btn-act-process' : 'btn-act-complete'}">
+                  ${b.active !== false ? 'Hide' : 'Show'}
+                </button>
+                <button onclick="deleteBanner(${idx})" class="btn-act btn-act-cancel">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function handleAddNewBanner(e) {
+      e.preventDefault();
+      const title = document.getElementById("newBannerTitle").value.trim();
+      const image = document.getElementById("newBannerImage").value.trim();
+      const link = document.getElementById("newBannerLink").value.trim();
+
+      const newBanner = {
+        id: Date.now(),
+        title,
+        image,
+        link: link || "contactus.html",
+        active: true
+      };
+
+      adminBanners.push(newBanner);
+      API.saveBanners(adminBanners);
+      renderAdminBanners();
+
+      document.getElementById("newBannerTitle").value = "";
+      document.getElementById("newBannerImage").value = "";
+      document.getElementById("newBannerLink").value = "";
+
+      alert("✅ New banner posted to Carousel slider!");
+    }
+
+    function selectLocalPresetBanner() {
+      const presets = [
+        "images/event_banner.jpg",
+        "images/banners/1791115595.jpg",
+        "images/banners/1785487439.jpg",
+        "images/banners/1787819158.jpg",
+        "images/banners/1787819236.png",
+        "images/notices/1791115637_home_page_notice.jpg"
+      ];
+      const choice = prompt("Select banner index (0-5):\n0: Special Event Banner\n1: Discount FF Banner 1\n2: Flash Sale Banner 2\n3: Community Banner 3\n4: Banner 4\n5: Notice Banner", "0");
+      if (choice !== null && presets[choice]) {
+        document.getElementById("newBannerImage").value = presets[choice];
+        document.getElementById("newBannerTitle").value = "Featured Topup Banner";
+      }
+    }
+
+    function toggleBannerActive(index) {
+      adminBanners[index].active = adminBanners[index].active === false ? true : false;
+      API.saveBanners(adminBanners);
+      renderAdminBanners();
+    }
+
+    function deleteBanner(index) {
+      if (confirm("Are you sure you want to delete this banner from the slider?")) {
+        adminBanners.splice(index, 1);
+        API.saveBanners(adminBanners);
+        renderAdminBanners();
+      }
+    }
+
+    // Payment Numbers
+    function savePaymentNumbers(e) {
+      e.preventDefault();
+      siteSettings.bkash_number = document.getElementById("payBkashNum").value.trim();
+      siteSettings.bkash_type = document.getElementById("payBkashType").value;
+      siteSettings.nagad_number = document.getElementById("payNagadNum").value.trim();
+      siteSettings.nagad_type = document.getElementById("payNagadType").value;
+      siteSettings.rocket_number = document.getElementById("payRocketNum").value.trim();
+      siteSettings.min_deposit = document.getElementById("payMinDeposit").value;
+
+      API.saveSettings(siteSettings);
+      alert("✅ Payment numbers updated! Customers will now see these numbers on checkout and wallet recharge.");
+    }
+
+    // Spin & Flash Sale
+    function saveSpinSaleSettings(e) {
+      e.preventDefault();
+      siteSettings.spin_cost = parseInt(document.getElementById("spinCostInput").value) || 5;
+      siteSettings.spin_enabled = document.getElementById("spinStatusSelect").value === "true";
+      siteSettings.flashsale_text = document.getElementById("flashSaleText").value;
+      siteSettings.flashsale_active = document.getElementById("flashSaleStatus").value === "true";
+
+      API.saveSettings(siteSettings);
+      alert(`✅ Settings saved! Spin cost set to ${siteSettings.spin_cost} ৳.`);
+    }
+
+    // Socials
+    function saveSocialSettings(e) {
+      e.preventDefault();
+      siteSettings.telegram_link = document.getElementById("socTelegramLink").value.trim();
+      siteSettings.whatsapp_number = document.getElementById("socWhatsappNum").value.trim();
+      siteSettings.help_phone = document.getElementById("socHelpPhone").value.trim();
+
+      API.saveSettings(siteSettings);
+      alert("✅ Helpline and social channels updated!");
+    }
+
+    // Render Orders
+    function updateMetrics() {
+      const totalOrders = adminOrders.length;
+      const pendingOrders = adminOrders.filter(o => o.status === "Pending").length;
+      const totalRev = adminOrders
+        .filter(o => o.status === "Completed")
+        .reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+      const totalUsers = adminUsers.length;
+      const pendingReqs = adminWalletReqs.filter(r => r.status === "Pending").length;
+
+      document.getElementById("statTotalOrders").textContent = totalOrders;
+      document.getElementById("statPendingOrders").textContent = pendingOrders;
+      document.getElementById("statTotalRevenue").textContent = totalRev + " ৳";
+      document.getElementById("statTotalUsers").textContent = totalUsers;
+      document.getElementById("statWalletReqs").textContent = pendingReqs;
+
+      document.getElementById("tabBadgeOrders").textContent = pendingOrders ? `${pendingOrders} Pending` : totalOrders;
+      document.getElementById("tabBadgeWallet").textContent = pendingReqs ? `${pendingReqs} New` : adminWalletReqs.length;
+    }
+
+    function renderOrdersTable() {
+      const tbody = document.getElementById("ordersTableBody");
+      const search = document.getElementById("orderSearchInput").value.toLowerCase().trim();
+
+      const filtered = adminOrders.filter(o => {
+        const matchStatus = (activeFilter === 'all') || (o.status === activeFilter);
+        const matchSearch = !search ||
+          (o.id && o.id.toLowerCase().includes(search)) ||
+          (o.playerId && o.playerId.includes(search)) ||
+          (o.phone && o.phone.includes(search)) ||
+          (o.product && o.product.toLowerCase().includes(search)) ||
+          (o.user_name && o.user_name.toLowerCase().includes(search));
+        return matchStatus && matchSearch;
+      });
+
+      tbody.innerHTML = "";
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #94a3b8; padding: 30px;">No orders found matching the filter.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(o => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${o.id}</strong></td>
+          <td style="color: #94a3b8; font-size: 12.5px;">${o.date || 'N/A'}</td>
+          <td>
+            <div style="font-weight: 700;">${o.user_name || 'Customer'}</div>
+            <small style="color: #94a3b8;">${o.phone || ''}</small>
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #38bdf8;">${o.product || 'FF Topup'}</div>
+            <small style="color: #cbd5e1;">${o.package || ''}</small>
+          </td>
+          <td>
+            <span class="uid-tag" onclick="navigator.clipboard.writeText('${o.playerId}'); alert('Copied UID: ${o.playerId}')" title="Click to copy UID">
+              ${o.playerId || 'N/A'} 📋
+            </span>
+          </td>
+          <td>
+            <span style="font-weight: 700;">${o.method || 'bKash'}</span><br>
+            <small style="color: #94a3b8; font-family: monospace;">${o.trxId || ''}</small>
+          </td>
+          <td><strong style="color: #ff6702; font-size: 15px;">${o.amount} ৳</strong></td>
+          <td><span class="status-badge ${o.status}">${o.status}</span></td>
+          <td>
+            <div class="action-btn-group">
+              ${o.status !== 'Completed' ? `<button onclick="updateOrderStatus('${o.id}', 'Completed')" class="btn-act btn-act-complete" title="Mark Completed">✅ Done</button>` : ''}
+              ${o.status === 'Pending' ? `<button onclick="updateOrderStatus('${o.id}', 'Processing')" class="btn-act btn-act-process" title="Mark Processing">⏳ Process</button>` : ''}
+              ${o.status !== 'Cancelled' ? `<button onclick="updateOrderStatus('${o.id}', 'Cancelled')" class="btn-act btn-act-cancel" title="Cancel & Refund">❌ Cancel</button>` : ''}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+      const order = adminOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.status = newStatus;
+      localStorage.setItem("samirtopup_orders", JSON.stringify(adminOrders));
+
+      const token = sessionStorage.getItem("samirtopup_admin_token");
+      try {
+        await fetch("/api/orders", {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": "Bearer " + token } : {})
+          },
+          body: JSON.stringify({ orderId, status: newStatus })
+        });
+      } catch (e) {}
+
+      updateMetrics();
+      renderOrdersTable();
+    }
+
+    function filterOrderStatus(status, btn) {
+      activeFilter = status;
+      document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      renderOrdersTable();
+    }
+
+    function handleOrderSearch() {
+      renderOrdersTable();
+    }
+
+    // Render Wallet Requests
+    function renderWalletTable() {
+      const tbody = document.getElementById("walletTableBody");
+      tbody.innerHTML = "";
+
+      if (adminWalletReqs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #94a3b8; padding: 25px;">No wallet requests pending.</td></tr>`;
+        return;
+      }
+
+      adminWalletReqs.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${r.id}</strong></td>
+          <td style="color: #94a3b8; font-size: 12.5px;">${r.date || 'N/A'}</td>
+          <td><strong>${r.user_name}</strong></td>
+          <td>${r.phone}</td>
+          <td><span style="font-weight: 700;">${r.method}</span></td>
+          <td><span style="font-family: monospace; color: #facc15;">${r.trxId}</span></td>
+          <td><strong style="color: #10b981; font-size: 15px;">+${r.amount} ৳</strong></td>
+          <td><span class="status-badge ${r.status}">${r.status}</span></td>
+          <td>
+            ${r.status === 'Pending' ? `
+              <div class="action-btn-group">
+                <button onclick="handleWalletAction('${r.id}', 'approve')" class="btn-act btn-act-complete">Approve</button>
+                <button onclick="handleWalletAction('${r.id}', 'reject')" class="btn-act btn-act-cancel">Reject</button>
+              </div>
+            ` : `<small style="color: #94a3b8;">Closed</small>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function handleWalletAction(requestId, action) {
+      const item = adminWalletReqs.find(r => r.id === requestId);
+      if (!item) return;
+
+      const token = sessionStorage.getItem("samirtopup_admin_token");
+      // 1. Call Serverless / MongoDB API
+      try {
+        const res = await fetch("/api/wallet", {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": "Bearer " + token } : {})
+          },
+          body: JSON.stringify({ requestId, action })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          alert("Error: " + (data.error || "Action failed"));
+          return;
+        }
+      } catch (e) {
+        console.warn("Backend wallet API unreachable, performing local state update");
+      }
+
+      // 2. Local State & Storage Synchronization
+      if (action === 'approve') {
+        item.status = 'Approved';
+        
+        // Find and update user in accounts list
+        let user = adminUsers.find(u => u.phone === item.phone || u.name === item.user_name);
+        if (user) {
+          user.balance = (Number(user.balance) || 0) + Number(item.amount);
+          localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
+        }
+
+        // Also update active session user if matches
+        const activeUser = JSON.parse(localStorage.getItem("samirtopup_user") || "null");
+        if (activeUser && (activeUser.phone === item.phone || activeUser.name === item.user_name)) {
+          activeUser.balance = (Number(activeUser.balance) || 0) + Number(item.amount);
+          localStorage.setItem("samirtopup_user", JSON.stringify(activeUser));
+        }
+
+        alert(`✅ Approved ${item.amount} ৳ deposit for ${item.user_name}! User balance has been credited.`);
+      } else {
+        item.status = 'Rejected';
+        alert(`❌ Deposit request ${requestId} for ${item.user_name} has been rejected.`);
+      }
+
+      localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(adminWalletReqs));
+      updateMetrics();
+      renderWalletTable();
+      renderUsersTable();
+    }
+
+    // Render Users
+    function renderUsersTable() {
+      const tbody = document.getElementById("usersTableBody");
+      tbody.innerHTML = "";
+
+      adminUsers.forEach(u => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>#${u.id}</strong></td>
+          <td><strong>${u.name}</strong></td>
+          <td>${u.phone || u.email}</td>
+          <td><strong style="color: #10b981; font-size: 15px;">${u.balance || 0} ৳</strong></td>
+          <td>${u.total_spend || 0} ৳</td>
+          <td><span class="status-badge Processing">${u.role || 'user'}</span></td>
+          <td>
+            <div style="display: flex; gap: 6px;">
+              <button onclick="adjustUserBal('${u.id}', 100)" class="btn-act btn-act-complete">+100 ৳</button>
+              <button onclick="adjustUserBal('${u.id}', -50)" class="btn-act btn-act-cancel">-50 ৳</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function adjustUserBal(userId, amount) {
+      const user = adminUsers.find(u => u.id == userId);
+      if (!user) return;
+      user.balance = Math.max(0, (user.balance || 0) + amount);
+      localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
+      renderUsersTable();
+
+      const token = sessionStorage.getItem("samirtopup_admin_token");
+      try {
+        await fetch("/api/admin?action=adjust_balance", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": "Bearer " + token } : {})
+          },
+          body: JSON.stringify({
+            userId,
+            amount: Math.abs(amount),
+            type: amount >= 0 ? 'add' : 'deduct'
+          })
+        });
+      } catch (e) {}
+    }
+
+    // Tab Switching
+    function switchTab(tabName, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      document.getElementById("panelOrders").style.display = tabName === 'orders' ? 'block' : 'none';
+      document.getElementById("panelMaintenance").style.display = tabName === 'maintenance' ? 'block' : 'none';
+      document.getElementById("panelAnnouncements").style.display = tabName === 'announcements' ? 'block' : 'none';
+      document.getElementById("panelBanners").style.display = tabName === 'banners' ? 'block' : 'none';
+      document.getElementById("panelPayments").style.display = tabName === 'payments' ? 'block' : 'none';
+      document.getElementById("panelWallet").style.display = tabName === 'wallet' ? 'block' : 'none';
+      document.getElementById("panelSpinSale").style.display = tabName === 'spin_sale' ? 'block' : 'none';
+      document.getElementById("panelUsers").style.display = tabName === 'users' ? 'block' : 'none';
+      document.getElementById("panelSocials").style.display = tabName === 'socials' ? 'block' : 'none';
+    }
+
+    // Init
+    document.addEventListener("DOMContentLoaded", () => {
+      checkAuth();
+    });
+  </script>
+</body>
+</html>

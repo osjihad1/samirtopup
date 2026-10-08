@@ -1,0 +1,320 @@
+﻿<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Spenders Leaderboard - SAMIR TOPUP</title>
+  <meta name="description" content="View top spending players and winners on SAMIR TOPUP Bangladesh.">
+  <meta name="theme-color" content="#042d49">
+  
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+  <style>
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .leaderboard-table th {
+      background: #051626;
+      color: #94a3b8;
+      font-size: 13px;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .leaderboard-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    .leaderboard-table tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    .rank-cell {
+      font-weight: 800;
+      width: 50px;
+    }
+    .rank-1 { color: #eab308; font-size: 16px; }
+    .rank-2 { color: #cbd5e1; font-size: 15px; }
+    .rank-3 { color: #d97706; font-size: 15px; }
+  </style>
+</head>
+<body>
+
+  <!-- Notice Ticker Bar -->
+  <div class="top-notice-bar">
+    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-right: 12px; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.3);">
+      NOTICE:
+    </div>
+    <div class="notice-ticker-wrapper">
+      <div id="noticeTickerText" class="notice-ticker-content">
+        যে কোনো সমস্যা হলে দ্রুত আমাদের সাপোর্ট দিন! ২৪/৭ ফাস্ট সার্ভিস। SAMIR TOPUP এর সাথে থাকার জন্য ধন্যবাদ!
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="index.html" class="site-logo">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP Logo">
+        <div class="site-logo-text">
+          <span class="site-logo-title">SAMIR TOPUP</span>
+          <span class="site-logo-subtitle">Fast & Reliable Topup</span>
+        </div>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="shop.html" class="nav-link">Shop</a></li>
+        <li><a href="flashsale.html" class="nav-link flash-link">⚡ Flash Sale</a></li>
+        <li><a href="leaderboard.html" class="nav-link active">Leaderboard</a></li>
+        <li><a href="javascript:void(0)" onclick="openEventModal()" class="nav-link event-link"><span class="event-fire-icon">🔥</span> Event <span class="badge-pulse">HOT</span></a></li>
+        <li><a href="contactus.html" class="nav-link">Contact Us</a></li>
+      </ul>
+
+      <div class="header-actions">
+        <button onclick="openEventModal()" class="btn-event-nav" title="Special Event Announcement">
+          <span class="event-fire-icon">🎉</span> Event <span class="badge-pulse">HOT</span>
+        </button>
+        <button onclick="openSpinModal()" class="btn-spin-nav">
+          <span>🎁</span> Spin & Win
+        </button>
+        <div id="authNavArea">
+          <a href="login.html" class="btn-login">Login</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Leaderboard Main Content -->
+  <main class="main-content">
+    
+    <div class="section-header" style="margin-top: 10px;">
+      <h1 class="section-title">TOP SPENDERS RANKING</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: 6px;">
+        Top players with highest recharge amounts this month!
+      </p>
+    </div>
+
+    <!-- Podium Section -->
+    <div class="podium-container" id="leaderboardPodium">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Leaderboard Table Container -->
+    <div class="topup-card" style="padding: 0; overflow-x: auto;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <h3 style="font-size: 16px; font-weight: 700; color: white;">Hall of Fame</h3>
+        <input type="text" id="leaderSearchInput" class="input-field" placeholder="Search player..." style="max-width: 240px; padding: 8px 12px; font-size: 13px;" oninput="searchLeaderboard()">
+      </div>
+
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th class="rank-cell">Rank</th>
+            <th>Player</th>
+            <th>User ID</th>
+            <th>Total Spend</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardTbody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Spin Modal -->
+  <div class="modal-overlay" id="spinModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeSpinModal()">&times;</button>
+      <div class="spin-container">
+        <h3 style="color: #ec4899; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">LUCKY SPIN WHEEL</h3>
+        <div class="spin-header-badges">
+          <span class="spin-price-pill">🪙 স্পিন ফি: <strong>ফ্রী (Free)</strong></span>
+          <span class="spin-balance-pill">👛 ব্যালেন্স: <strong id="spinUserBalance">0 ৳</strong></span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">সম্পূর্ণ ফ্রি স্পিন ঘুরিয়ে ভাগ্য পরীক্ষা করুন! জিতে নিন ক্যাশব্যাক পুরস্কার।</p>
+        <div class="wheel-pointer"></div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        <button id="btnSpinAction" onclick="startSpin()" class="btn-buy-now btn-spin-action">
+          🎰 SPIN NOW (ফ্রি স্পিন)
+        </button>
+        <div id="spinResultBox" style="width: 100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Event / Announcement Popup Modal -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal-card event-modal-card">
+      <button class="modal-close" onclick="closeEventModal()">&times;</button>
+      <div class="event-modal-header-tag">
+        <span class="event-fire-icon">🔥</span> বিশেষ সেবা অফার
+      </div>
+      
+      <div class="event-banner-wrap">
+        <img src="images/event_banner.jpg" alt="Special Event Announcement" class="event-popup-img">
+      </div>
+
+      <div class="event-modal-footer">
+        <div class="event-modal-text">
+          <h4>
+            <span>💖</span> বিশেষ সেবা বিজ্ঞপ্তি
+          </h4>
+          <p>
+            অনুষ্ঠান, আড্ডা বা ঘোরাঘুরির জন্য মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন! সম্পূর্ণ বিশ্বস্ত ও নিরাপদ সেবা।
+          </p>
+        </div>
+
+        <div class="event-modal-buttons">
+          <a href="contactus.html" class="btn-buy-now event-book-btn">
+            <span>বুক করুন এখনই 👉</span>
+          </a>
+          <button onclick="closeEventModal()" class="btn-login event-dismiss-btn">
+            বন্ধ করুন
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-bottom">
+        <div>© 2026 SAMIR TOPUP. All rights reserved.</div>
+        <div><a href="index.html" style="color: #ff6702; text-decoration: none;">Back to Home</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-bottom-bar">
+    <a href="index.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="shop.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Shop</span>
+    </a>
+    <button onclick="openSpinModal()" class="mobile-nav-item" style="background: none; border: none; cursor: pointer; color: #ec4899;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/></svg>
+      <span>Spin</span>
+    </button>
+    <a href="leaderboard.html" class="mobile-nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/></svg>
+      <span>Rank</span>
+    </a>
+    <a href="profile.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/spin.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let leaderList = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const data = await API.getLeaderboard(20);
+      leaderList = data.data || [];
+      renderPodium(leaderList);
+      renderTable(leaderList);
+    });
+
+    function renderPodium(players) {
+      const podium = document.getElementById("leaderboardPodium");
+      if (!podium || players.length < 3) return;
+
+      const p1 = players[0];
+      const p2 = players[1];
+      const p3 = players[2];
+
+      podium.innerHTML = `
+        <div class="podium-item second">
+          <div class="podium-avatar">
+            <img src="${p2.avatar || 'images/avatars/avatar2.svg'}" alt="${p2.name}">
+            <div class="podium-rank-badge">2</div>
+          </div>
+          <div class="podium-name">${p2.name}</div>
+          <div class="podium-amount">৳${(p2.total_spend || 0).toLocaleString()}</div>
+        </div>
+
+        <div class="podium-item first">
+          <div class="podium-avatar">
+            <img src="${p1.avatar || 'images/avatars/avatar1.svg'}" alt="${p1.name}">
+            <div class="podium-rank-badge">1</div>
+          </div>
+          <div class="podium-name">${p1.name} 👑</div>
+          <div class="podium-amount">৳${(p1.total_spend || 0).toLocaleString()}</div>
+        </div>
+
+        <div class="podium-item third">
+          <div class="podium-avatar">
+            <img src="${p3.avatar || 'images/avatars/avatar3.svg'}" alt="${p3.name}">
+            <div class="podium-rank-badge">3</div>
+          </div>
+          <div class="podium-name">${p3.name}</div>
+          <div class="podium-amount">৳${(p3.total_spend || 0).toLocaleString()}</div>
+        </div>
+      `;
+    }
+
+    function renderTable(players) {
+      const tbody = document.getElementById("leaderboardTbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (players.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color:#94a3b8;">No players found.</td></tr>`;
+        return;
+      }
+
+      players.forEach((p, idx) => {
+        const rank = idx + 1;
+        const rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td class="rank-cell ${rankClass}">#${rank}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <img src="${p.avatar || 'images/avatars/default.svg'}" alt="${p.name}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #0c2b48;">
+              <span style="font-weight: 600;">${p.name}</span>
+            </div>
+          </td>
+          <td style="color: #94a3b8;">${p.id}</td>
+          <td style="color: #ff6702; font-weight: 700;">৳${(p.total_spend || 0).toLocaleString()}</td>
+          <td>
+            <span style="background: rgba(16,185,129,0.2); color: #34d399; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+              ✓ Verified
+            </span>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function searchLeaderboard() {
+      const q = document.getElementById("leaderSearchInput")?.value.toLowerCase().trim() || "";
+      const filtered = leaderList.filter(p => p.name.toLowerCase().includes(q) || p.id.toString().includes(q));
+      renderTable(filtered);
+    }
+  </script>
+</body>
+</html>
+
+

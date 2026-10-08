@@ -1,0 +1,165 @@
+﻿<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refund & Return Policy - SAMIR TOPUP</title>
+  <meta name="theme-color" content="#042d49">
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body>
+
+  <!-- Notice Ticker Bar -->
+  <div class="top-notice-bar">
+    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-right: 12px; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.3);">
+      NOTICE:
+    </div>
+    <div class="notice-ticker-wrapper">
+      <div id="noticeTickerText" class="notice-ticker-content">
+        যে কোনো সমস্যা হলে দ্রুত আমাদের সাপোর্ট দিন! ২৪/৭ ফাস্ট সার্ভিস। SAMIR TOPUP এর সাথে থাকার জন্য ধন্যবাদ!
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="index.html" class="site-logo">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP Logo">
+        <div class="site-logo-text">
+          <span class="site-logo-title">SAMIR TOPUP</span>
+          <span class="site-logo-subtitle">Fast & Reliable Topup</span>
+        </div>
+      </a>
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="shop.html" class="nav-link">Shop</a></li>
+        <li><a href="flashsale.html" class="nav-link flash-link">⚡ Flash Sale</a></li>
+        <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+        <li><a href="javascript:void(0)" onclick="openEventModal()" class="nav-link event-link"><span class="event-fire-icon">🔥</span> Event <span class="badge-pulse">HOT</span></a></li>
+        <li><a href="contactus.html" class="nav-link">Contact Us</a></li>
+      </ul>
+      <div class="header-actions">
+        <button onclick="openEventModal()" class="btn-event-nav" title="Special Event Announcement">
+          <span class="event-fire-icon">🎉</span> Event <span class="badge-pulse">HOT</span>
+        </button>
+        <button onclick="openSpinModal()" class="btn-spin-nav">
+          <span>🎁</span> Spin & Win
+        </button>
+        <div id="authNavArea">
+          <a href="login.html" class="btn-login">Login</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="main-content" style="max-width: 860px;">
+    <div class="section-header" style="margin-top: 10px;">
+      <h1 class="section-title">REFUND & RETURN POLICY</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: 6px;">This policy explains refunds and returns for digital products purchased from SAMIR TOPUP.</p>
+    </div>
+
+    <div class="topup-card" style="line-height: 1.8; color: #cbd5e1; font-size: 15px; padding: 32px;">
+      <h3 style="color: white; font-size: 17px; margin-bottom: 8px;">1. Digital Products</h3>
+      <p style="margin-bottom: 20px;">
+        Top-ups, vouchers, and game credits are digital products. Once successfully delivered to the submitted account or player ID, they cannot normally be returned or refunded.
+      </p>
+
+      <h3 style="color: white; font-size: 17px; margin-bottom: 8px;">2. Failed or Cancelled Orders</h3>
+      <p style="margin-bottom: 20px;">
+        If an order fails or is cancelled before delivery, the eligible amount will normally be returned to your site wallet or original payment method, depending on the payment process used.
+      </p>
+
+      <h3 style="color: white; font-size: 17px; margin-bottom: 8px;">3. Incorrect Information</h3>
+      <p style="margin-bottom: 20px;">
+        We cannot refund a successfully delivered order when an incorrect player ID, server, region, or account detail was supplied by the customer. Please verify your UID before placing an order.
+      </p>
+
+      <h3 style="color: white; font-size: 17px; margin-bottom: 8px;">4. Duplicate or Incorrect Delivery</h3>
+      <p style="margin-bottom: 20px;">
+        If you believe an order was duplicated, charged incorrectly, or delivered incorrectly, contact support with the order ID and payment details so the issue can be reviewed.
+      </p>
+
+      <h3 style="color: white; font-size: 17px; margin-bottom: 8px;">5. Processing Time</h3>
+      <p>
+        Approved refunds may require several business days depending on the payment provider (bKash/Nagad). Wallet balance refunds are usually credited immediately.
+      </p>
+    </div>
+  </main>
+
+  <!-- Spin Modal -->
+  <div class="modal-overlay" id="spinModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeSpinModal()">&times;</button>
+      <div class="spin-container">
+        <h3 style="color: #ec4899; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">LUCKY SPIN WHEEL</h3>
+        <div class="spin-header-badges">
+          <span class="spin-price-pill">🪙 স্পিন ফি: <strong>ফ্রী (Free)</strong></span>
+          <span class="spin-balance-pill">👛 ব্যালেন্স: <strong id="spinUserBalance">0 ৳</strong></span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">সম্পূর্ণ ফ্রি স্পিন ঘুরিয়ে ভাগ্য পরীক্ষা করুন! জিতে নিন ক্যাশব্যাক পুরস্কার।</p>
+        <div class="wheel-pointer"></div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        <button id="btnSpinAction" onclick="startSpin()" class="btn-buy-now btn-spin-action">
+          🎰 SPIN NOW (ফ্রি স্পিন)
+        </button>
+        <div id="spinResultBox" style="width: 100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Event / Announcement Popup Modal -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal-card event-modal-card">
+      <button class="modal-close" onclick="closeEventModal()">&times;</button>
+      <div class="event-modal-header-tag">
+        <span class="event-fire-icon">🔥</span> বিশেষ সেবা অফার
+      </div>
+      
+      <div class="event-banner-wrap">
+        <img src="images/event_banner.jpg" alt="Special Event Announcement" class="event-popup-img">
+      </div>
+
+      <div class="event-modal-footer">
+        <div class="event-modal-text">
+          <h4>
+            <span>💖</span> বিশেষ সেবা বিজ্ঞপ্তি
+          </h4>
+          <p>
+            অনুষ্ঠান, আড্ডা বা ঘোরাঘুরির জন্য মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন! সম্পূর্ণ বিশ্বস্ত ও নিরাপদ সেবা।
+          </p>
+        </div>
+
+        <div class="event-modal-buttons">
+          <a href="contactus.html" class="btn-buy-now event-book-btn">
+            <span>বুক করুন এখনই 👉</span>
+          </a>
+          <button onclick="closeEventModal()" class="btn-login event-dismiss-btn">
+            বন্ধ করুন
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-bottom">
+        <div>© 2026 SAMIR TOPUP. All rights reserved.</div>
+        <div><a href="index.html" style="color: #ff6702; text-decoration: none;">Back to Home</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/spin.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+
+

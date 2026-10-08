@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Topup - SAMIR TOPUP</title>
+  <meta name="description" content="Instant Game Topup with bKash, Nagad, and Wallet. Fast, safe, and reliable.">
+  <meta name="theme-color" content="#042d49">
+  
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body>
+
+  <!-- Notice Ticker Bar -->
+  <div class="top-notice-bar">
+    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-right: 12px; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.3);">
+      NOTICE:
+    </div>
+    <div class="notice-ticker-wrapper">
+      <div id="noticeTickerText" class="notice-ticker-content">
+        যে কোনো সমস্যা হলে দ্রুত আমাদের সাপোর্ট দিন! ২৪/৭ ফাস্ট সার্ভিস। SAMIR TOPUP এর সাথে থাকার জন্য ধন্যবাদ!
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="index.html" class="site-logo">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP Logo">
+        <div class="site-logo-text">
+          <span class="site-logo-title">SAMIR TOPUP</span>
+          <span class="site-logo-subtitle">Fast & Reliable Topup</span>
+        </div>
+      </a>
+
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="shop.html" class="nav-link active">Shop</a></li>
+        <li><a href="flashsale.html" class="nav-link flash-link">⚡ Flash Sale</a></li>
+        <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+        <li><a href="javascript:void(0)" onclick="openEventModal()" class="nav-link event-link"><span class="event-fire-icon">🔥</span> Event <span class="badge-pulse">HOT</span></a></li>
+        <li><a href="contactus.html" class="nav-link">Contact Us</a></li>
+      </ul>
+
+      <div class="header-actions">
+        <button onclick="openEventModal()" class="btn-event-nav" title="Special Event Announcement">
+          <span class="event-fire-icon">🎉</span> Event <span class="badge-pulse">HOT</span>
+        </button>
+        <button onclick="openSpinModal()" class="btn-spin-nav">
+          <span>🎁</span> Spin & Win
+        </button>
+        <div id="authNavArea">
+          <a href="login.html" class="btn-login">Login</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Topup Layout -->
+  <main class="main-content">
+    
+    <!-- Product Header Hero -->
+    <div class="topup-card" style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+      <img id="productLogo" src="images/products/1763469001.jpg" alt="Game Icon" style="width: 80px; height: 80px; border-radius: 14px; object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.4);">
+      <div style="flex: 1; min-width: 250px;">
+        <h1 id="productTitle" style="font-size: 24px; font-weight: 800; color: #fff;">FF Uid TopUp (BD)</h1>
+        <div style="display: flex; gap: 8px; margin: 6px 0; font-size: 12px;">
+          <span style="background: rgba(16,185,129,0.2); color: #34d399; padding: 2px 8px; border-radius: 4px; font-weight: 600;">✓ Automated Delivery</span>
+          <span style="background: rgba(255,103,2,0.2); color: #ff6702; padding: 2px 8px; border-radius: 4px; font-weight: 600;">⚡ Instant Delivery</span>
+        </div>
+        <div id="productDesc" style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin-top: 6px;">
+          শুধু মাত্র Bangladesh সার্ভারের ID Code দিয়ে টপ আপ হবে। Player ID ভুল দিলে রিফান্ড গ্রহণযোগ্য নয়।
+        </div>
+      </div>
+    </div>
+
+    <!-- Step Grid Layout -->
+    <div class="topup-layout">
+      <!-- Steps Left Column -->
+      <div>
+        
+        <!-- Step 1: Select Package -->
+        <div class="topup-card">
+          <div class="step-header">
+            <div class="step-number">1</div>
+            <h2 class="step-title">Select Recharge Package</h2>
+          </div>
+          <div class="package-grid" id="packagesGrid">
+            <!-- Dynamically populated from API/data.js -->
+            <div class="package-btn active">
+              <div class="package-name">115 Diamonds</div>
+              <div class="package-price">৳80</div>
+            </div>
+            <div class="package-btn">
+              <div class="package-name">240 Diamonds</div>
+              <div class="package-price">৳160</div>
+            </div>
+            <div class="package-btn">
+              <div class="package-name">Weekly Membership</div>
+              <div class="package-price">৳158</div>
+            </div>
+            <div class="package-btn">
+              <div class="package-name">Monthly Membership</div>
+              <div class="package-price">৳790</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Account Information -->
+        <div class="topup-card">
+          <div class="step-header">
+            <div class="step-number">2</div>
+            <h2 class="step-title">Enter Account Info</h2>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label id="accountInputLabel" style="display: block; font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+              Player ID (UID)
+            </label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="playerIdInput" class="input-field" placeholder="এখানে আপনার গেম আইডি (UID) দিন" value="" autocomplete="off" required>
+              <button onclick="verifyPlayerId()" class="btn-login" style="padding: 0 16px; white-space: nowrap;">
+                Verify UID
+              </button>
+            </div>
+            <div id="uidVerifyResult" style="margin-top: 8px;"></div>
+          </div>
+          <p style="font-size: 12px; color: #64748b;">
+            💡 আপনার গেম প্রোফাইলে গিয়ে আইডি কোডটি কপি করে এখানে পেস্ট করুন।
+          </p>
+        </div>
+
+        <!-- Step 3: Select Payment Method -->
+        <div class="topup-card">
+          <div class="step-header">
+            <div class="step-number">3</div>
+            <h2 class="step-title">Select Payment Method</h2>
+          </div>
+          <div class="payment-methods-grid">
+            <div class="payment-method-card active" onclick="selectPayment('bkash', this)">
+              <img src="images/notices/1751691539_autopay.png" alt="bKash" class="payment-logo" onerror="this.src='images/samir_logo.svg'">
+              <span class="payment-name" style="color: #f43f5e;">bKash Instant</span>
+            </div>
+
+            <div class="payment-method-card" onclick="selectPayment('nagad', this)">
+              <img src="images/notices/1751691539_autopay.png" alt="Nagad" class="payment-logo" onerror="this.src='images/samir_logo.svg'">
+              <span class="payment-name" style="color: #f97316;">Nagad Pay</span>
+            </div>
+
+            <div class="payment-method-card" onclick="selectPayment('wallet', this)">
+              <img src="images/notices/1751691539_walletlogo.png" alt="Wallet" class="payment-logo">
+              <span class="payment-name" style="color: #10b981;">Site Wallet</span>
+            </div>
+          </div>
+          <div id="walletBalanceHint" style="display: none; margin-top: 14px; padding: 12px 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; font-size: 13px; color: #cbd5e1; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span>বর্তমান ওয়ালেট ব্যালেন্স: </span>
+              <strong id="walletHintBalance" style="color: #34d399; font-size: 15px;">৳0</strong>
+            </div>
+            <a href="profile.html?tab=addwallet" style="color: #ff6702; font-weight: 700; text-decoration: none; background: rgba(255, 103, 2, 0.15); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,103,2,0.3);">+ Add Money</a>
+          </div>
+        </div>
+
+        <!-- Step 4: Apply Coupon -->
+        <div class="topup-card">
+          <div class="step-header">
+            <div class="step-number">4</div>
+            <h2 class="step-title">Apply Coupon Code (Optional)</h2>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="couponInput" class="input-field" placeholder="Enter coupon (e.g. TOPUP10)">
+            <button onclick="applyCouponCode()" class="btn-login" style="padding: 0 18px; white-space: nowrap;">
+              Apply
+            </button>
+          </div>
+          <p style="font-size: 12px; color: #10b981; margin-top: 6px;">
+            Promo: Use code <strong>TOPUP10</strong> for 10 ৳ off!
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Sticky Order Summary -->
+      <div>
+        <div class="order-summary-card">
+          <h3 style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+            Order Summary
+          </h3>
+
+          <div class="summary-row">
+            <span>Item:</span>
+            <strong id="summaryPackageName" style="color: #fff; max-width: 180px; text-align: right;">115 Diamonds</strong>
+          </div>
+
+          <div class="summary-row">
+            <span>Delivery:</span>
+            <span style="color: #34d399; font-weight: 600;">Instant (1-2 mins)</span>
+          </div>
+
+          <div class="summary-row">
+            <span>Payment Method:</span>
+            <strong id="summaryPaymentMethod" style="color: #ff6702;">BKASH</strong>
+          </div>
+
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span id="summarySubtotal">৳80</span>
+          </div>
+
+          <div class="summary-row">
+            <span>Discount:</span>
+            <span id="summaryDiscount" style="color: #10b981;">-৳0</span>
+          </div>
+
+          <div class="summary-row total">
+            <span>Total Payable:</span>
+            <span id="summaryTotal" style="color: #ff6702;">৳80</span>
+          </div>
+
+          <button onclick="handleCheckout()" class="btn-buy-now">
+            <span>⚡ BUY NOW</span>
+          </button>
+
+          <div style="margin-top: 14px; text-align: center; font-size: 12px; color: #64748b;">
+            🔒 100% Safe & Automated Transaction
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Payment Checkout Modal -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+      <div style="text-align: center; margin-bottom: 18px;">
+        <h3 style="font-size: 20px; font-weight: 800; color: #fff;">Complete Payment</h3>
+        <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">Player UID: <strong id="payModalUid" style="color: #38bdf8;"></strong></p>
+      </div>
+
+      <div style="background: #041c30; padding: 14px; border-radius: 12px; border: 1px solid #1a3a5c; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #94a3b8; font-size: 13px;">Payable Amount:</span>
+          <strong id="payModalAmount" style="color: #ff6702; font-size: 18px;">৳80</strong>
+        </div>
+        <p id="payModalNumber" style="font-size: 13px; color: #cbd5e1; line-height: 1.5;"></p>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+          Transaction ID (TrxID)
+        </label>
+        <input type="text" id="trxIdInput" class="input-field" placeholder="e.g. 9B8C7D6E5F">
+        <p style="font-size: 11px; color: #64748b; margin-top: 4px;">পেমেন্ট শেষে পাওয়া ট্রানজেকশন আইডিটি এখানে দিন।</p>
+      </div>
+
+      <button onclick="confirmPayment()" class="btn-buy-now">
+        Confirm & Submit Order
+      </button>
+    </div>
+  </div>
+
+  <!-- Spin & Win Modal -->
+  <div class="modal-overlay" id="spinModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeSpinModal()">&times;</button>
+      <div class="spin-container">
+        <h3 style="color: #ec4899; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">LUCKY SPIN WHEEL</h3>
+        <div class="spin-header-badges">
+          <span class="spin-price-pill">🪙 স্পিন ফি: <strong>ফ্রী (Free)</strong></span>
+          <span class="spin-balance-pill">👛 ব্যালেন্স: <strong id="spinUserBalance">0 ৳</strong></span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">সম্পূর্ণ ফ্রি স্পিন ঘুরিয়ে ভাগ্য পরীক্ষা করুন! জিতে নিন ক্যাশব্যাক পুরস্কার।</p>
+        <div class="wheel-pointer"></div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        <button id="btnSpinAction" onclick="startSpin()" class="btn-buy-now btn-spin-action">
+          🎰 SPIN NOW (ফ্রি স্পিন)
+        </button>
+        <div id="spinResultBox" style="width: 100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Event / Announcement Popup Modal -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal-card event-modal-card">
+      <button class="modal-close" onclick="closeEventModal()">&times;</button>
+      <div class="event-modal-header-tag">
+        <span class="event-fire-icon">🔥</span> বিশেষ সেবা অফার
+      </div>
+      
+      <div class="event-banner-wrap">
+        <img src="images/event_banner.jpg" alt="Special Event Announcement" class="event-popup-img">
+      </div>
+
+      <div class="event-modal-footer">
+        <div class="event-modal-text">
+          <h4>
+            <span>💖</span> বিশেষ সেবা বিজ্ঞপ্তি
+          </h4>
+          <p>
+            অনুষ্ঠান, আড্ডা বা ঘোরাঘুরির জন্য মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন! সম্পূর্ণ বিশ্বস্ত ও নিরাপদ সেবা।
+          </p>
+        </div>
+
+        <div class="event-modal-buttons">
+          <a href="contactus.html" class="btn-buy-now event-book-btn">
+            <span>বুক করুন এখনই 👉</span>
+          </a>
+          <button onclick="closeEventModal()" class="btn-login event-dismiss-btn">
+            বন্ধ করুন
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-bottom">
+        <div>© 2026 SAMIR TOPUP. All rights reserved.</div>
+        <div><a href="index.html" style="color: #ff6702; text-decoration: none;">Back to Home</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Floating Help -->
+  <a href="https://t.me/SamirTopuphelp" target="_blank" class="floating-help-btn" title="Telegram Help">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  </a>
+
+  <!-- Mobile Bottom Bar -->
+  <nav class="mobile-bottom-bar">
+    <a href="index.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="shop.html" class="mobile-nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Shop</span>
+    </a>
+    <button onclick="openSpinModal()" class="mobile-nav-item" style="background: none; border: none; cursor: pointer; color: #ec4899;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/></svg>
+      <span>Spin</span>
+    </button>
+    <a href="leaderboard.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/></svg>
+      <span>Rank</span>
+    </a>
+    <a href="profile.html" class="mobile-nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/spin.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/topup.js"></script>
+</body>
+</html>
+

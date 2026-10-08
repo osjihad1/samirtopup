@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - SAMIR TOPUP</title>
+  <meta name="description" content="Sign in to your SAMIR TOPUP account to track orders and add wallet balance.">
+  <meta name="theme-color" content="#042d49">
+  
+  <link rel="icon" type="image/png" href="images/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body style="justify-content: center; align-items: center; background: radial-gradient(circle at 50% 30%, #08243e, #041c30);">
+
+  <div style="width: 100%; max-width: 440px; padding: 24px;">
+    <!-- Logo -->
+    <div style="text-align: center; margin-bottom: 24px;">
+      <a href="index.html" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP" style="height: 52px;">
+      </a>
+      <h1 style="font-size: 24px; font-weight: 800; color: white; margin-top: 10px;">Welcome Back!</h1>
+      <p style="color: #94a3b8; font-size: 14px;">Sign in to manage your gaming topups and wallet</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="topup-card" style="padding: 28px;">
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+            Email or Phone Number
+          </label>
+          <input type="text" id="loginIdentifier" class="input-field" placeholder="017XXXXXXXX or email@example.com" required value="gamer@SamirTopup.com">
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 13px; font-weight: 600; color: #cbd5e1;">Password</label>
+            <a href="forgetpassword.html" style="font-size: 12px; color: #38bdf8; text-decoration: none;">Forgot Password?</a>
+          </div>
+          <input type="password" id="loginPassword" class="input-field" placeholder="••••••••" required value="password123">
+        </div>
+
+        <!-- Bot-Proof Security Captcha -->
+        <div style="margin-bottom: 16px; background: rgba(2,18,34,0.7); border: 1px solid rgba(255,103,2,0.3); border-radius: 10px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 12px; font-weight: 700; color: #cbd5e1;">🤖 Security Captcha</label>
+            <span id="captchaPromptText" style="font-size: 11px; color: #ff6702; font-weight: 700;">গণিত সমাধান করুন</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <div id="captchaSvgContainer" style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 50px;">
+              <span style="color: #94a3b8; font-size: 12px;">ক্যাপচা লোড হচ্ছে...</span>
+            </div>
+            <button type="button" onclick="refreshCaptcha()" title="Refresh Captcha" class="btn-act btn-act-process" style="padding: 10px 14px; font-size: 16px; border-radius: 8px; cursor: pointer;">
+              🔄
+            </button>
+          </div>
+          <input type="text" id="captchaInput" class="input-field" placeholder="ক্যাপচা কোড বা উত্তর লিখুন" required autocomplete="off" style="letter-spacing: 1px;">
+          <input type="hidden" id="captchaToken">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+          <input type="checkbox" id="rememberMe" checked style="accent-color: #ff6702;">
+          <label for="rememberMe" style="font-size: 13px; color: #94a3b8;">Remember this device</label>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="btn-buy-now" style="margin-top: 0; width: 100%;">
+          Sign In
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 14px; color: #94a3b8;">
+        Don't have an account? <a href="register.html" style="color: #ff6702; font-weight: 700; text-decoration: none;">Create One</a>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 16px;">
+      <a href="index.html" style="color: #64748b; font-size: 13px; text-decoration: none;">← Back to SAMIR TOPUP</a>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let currentCaptcha = null;
+
+    async function refreshCaptcha() {
+      const container = document.getElementById("captchaSvgContainer");
+      if (!container) return;
+      container.innerHTML = '<span style="color:#94a3b8; font-size:12px;">লোড হচ্ছে...</span>';
+      currentCaptcha = await API.getCaptcha();
+      if (currentCaptcha && currentCaptcha.svg) {
+        container.innerHTML = currentCaptcha.svg;
+        document.getElementById("captchaToken").value = currentCaptcha.token || "";
+        if (currentCaptcha.prompt) {
+          document.getElementById("captchaPromptText").textContent = currentCaptcha.prompt;
+        }
+      }
+      const inp = document.getElementById("captchaInput");
+      if (inp) inp.value = "";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      refreshCaptcha();
+    });
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById("loginIdentifier").value.trim();
+      const pass = document.getElementById("loginPassword").value;
+      const captchaAns = document.getElementById("captchaInput").value.trim();
+      const captchaTok = document.getElementById("captchaToken").value;
+      const btn = document.getElementById("btnLoginSubmit");
+
+      if (!captchaAns) {
+        showToast("অনুগ্রহ করে ক্যাপচা পূরণ করুন!", "error");
+        return;
+      }
+
+      if (!API.verifyCaptcha(captchaAns, captchaTok)) {
+        showToast("⚠️ ভুল ক্যাপচা উত্তর! অনুগ্রহ করে সঠিক উত্তর লিখুন।", "error");
+        refreshCaptcha();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "যাচাই করা হচ্ছে...";
+
+      const res = await API.login(id, pass, captchaAns, captchaTok);
+      btn.disabled = false;
+      btn.textContent = "Sign In";
+
+      if (res.success) {
+        showToast("Login successful! Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "profile.html";
+        }, 800);
+      } else {
+        showToast(res.message || "ভুল তথ্য বা ক্যাপচা!", "error");
+        refreshCaptcha();
+      }
+    }
+  </script>
+</body>
+</html>
+
