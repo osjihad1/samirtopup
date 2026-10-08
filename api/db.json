@@ -1,0 +1,194 @@
+{
+  "notice": {
+    "title": "জরুরি বিজ্ঞপ্তি!",
+    "message": "Samir Topup এ স্বাগতম! ১০০% ফাস্ট ও নিরাপদ অটোমেটেড টপআপ সার্ভিস। যে কোনো সমস্যায় আমাদের লাইভ সাপোর্টে নক করুন।",
+    "ticker": "Samir Topup এ আপনাকে স্বাগতম! ২৪/৭ ফাস্ট অটো ডেলিভারি। বিকাশ, নগদ ও ওয়ালেট দিয়ে মুহূর্তেই ডায়মন্ড কিনুন!",
+    "btn_text": "অফার দেখুন",
+    "btn_link": "shop.html",
+    "active": true
+  },
+  "users": [
+    {
+      "id": 1001,
+      "name": "Samir Admin",
+      "email": "admin@samirtopup.com",
+      "phone": "01711111111",
+      "balance": 15000,
+      "total_spend": 85400,
+      "role": "admin",
+      "created_at": "2026-01-01"
+    },
+    {
+      "id": 1002,
+      "name": "Tanvir Hasan",
+      "email": "tanvir@gamer.com",
+      "phone": "01822334455",
+      "balance": 450,
+      "total_spend": 3200,
+      "role": "user",
+      "created_at": "2026-02-14"
+    },
+    {
+      "id": 1003,
+      "name": "Shuvo Ahmed",
+      "email": "shuvo@gamer.com",
+      "phone": "01933445566",
+      "balance": 120,
+      "total_spend": 1850,
+      "role": "user",
+      "created_at": "2026-03-01"
+    },
+    {
+      "id": 1004,
+      "name": "Nabil Gamer",
+      "email": "nabil@gamer.com",
+      "phone": "01655667788",
+      "balance": 80,
+      "total_spend": 4120,
+      "role": "user",
+      "created_at": "2026-03-12"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ST-98214",
+      "date": "2026-10-08 11:32 PM",
+      "user_name": "Tanvir Hasan",
+      "phone": "01822334455",
+      "product": "FF Uid TopUp (BD)",
+      "package": "115 Diamonds",
+      "playerId": "284759205",
+      "amount": 78,
+      "method": "bKash",
+      "trxId": "BK87X291LA",
+      "status": "Pending"
+    },
+    {
+      "id": "ST-98213",
+      "date": "2026-10-08 10:45 PM",
+      "user_name": "Shuvo Ahmed",
+      "phone": "01933445566",
+      "product": "FF Uid TopUp (BD)",
+      "package": "Weekly Lite Flash Sale",
+      "playerId": "194820194",
+      "amount": 42,
+      "method": "Nagad",
+      "trxId": "NG91K2840B",
+      "status": "Processing"
+    },
+    {
+      "id": "ST-98212",
+      "date": "2026-10-08 09:12 PM",
+      "user_name": "Nabil Gamer",
+      "phone": "01655667788",
+      "product": "FF Uid TopUp (BD)",
+      "package": "Weekly Membership",
+      "playerId": "582049182",
+      "amount": 160,
+      "method": "Wallet",
+      "trxId": "WLT-77192",
+      "status": "Completed"
+    },
+    {
+      "id": "ST-98211",
+      "date": "2026-10-08 08:05 PM",
+      "user_name": "Robiul Islam",
+      "phone": "01744556677",
+      "product": "FF Uid TopUp (BD)",
+      "package": "240 Diamonds",
+      "playerId": "773910248",
+      "amount": 158,
+      "method": "bKash",
+      "trxId": "BK77M1940Q",
+      "status": "Completed"
+    },
+    {
+      "id": "ST-98210",
+      "date": "2026-10-08 06:40 PM",
+      "user_name": "Rakib Hossain",
+      "phone": "01511223344",
+      "product": "FF Uid TopUp (BD)",
+      "package": "Monthly Membership",
+      "playerId": "382910481",
+      "amount": 780,
+      "method": "bKash",
+      "trxId": "BK12P9832A",
+      "status": "Completed"
+    }
+  ],
+  "wallet_requests": [
+    {
+      "id": "REQ-101",
+      "user_name": "Tanvir Hasan",
+      "phone": "01822334455",
+      "amount": 500,
+      "method": "bKash",
+      "sender_number": "01822334455",
+      "trxId": "BK992A819K",
+      "status": "Pending",
+      "date": "2026-10-08 11:15 PM"
+    },
+    {
+      "id": "REQ-100",
+      "user_name": "Shuvo Ahmed",
+      "phone": "01933445566",
+      "amount": 300,
+      "method": "Nagad",
+      "sender_number": "01933445566",
+      "trxId": "NG8290192L",
+      "status": "Approved",
+      "date": "2026-10-08 09:30 PM"
+    }
+  ],
+  "settings": {
+    "maintenance_mode": false,
+    "maintenance_message": "আমাদের সার্ভার আপগ্রেডেশনের কাজ চলছে। খুব দ্রুতই সেবা পুনরায় চালু হবে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।",
+    "maintenance_eta": "Estimated 30 Minutes",
+    "bkash_number": "01700000000",
+    "bkash_type": "Personal (Send Money)",
+    "nagad_number": "01800000000",
+    "nagad_type": "Personal (Send Money)",
+    "rocket_number": "01900000000",
+    "spin_cost": 5,
+    "spin_enabled": true,
+    "flashsale_active": true,
+    "flashsale_text": "Weekly Lite Flash Sale",
+    "telegram_link": "https://t.me/samirtopup",
+    "whatsapp_number": "+8801700000000",
+    "event_strip_tag": "📢 বিশেষ বিজ্ঞপ্তি",
+    "event_strip_title": "এখানে গার্লফ্রেন্ড ভাড়া পাওয়া যায়! মনের মতো সঙ্গী বা গার্লফ্রেন্ড ভাড়া নিন",
+    "event_strip_btn": "বুক করুন এখনই 👉",
+    "event_strip_active": true
+  },
+  "banners": [
+    {
+      "id": 1,
+      "title": "Special Event Service",
+      "image": "images/event_banner.jpg",
+      "link": "contactus.html",
+      "active": true
+    },
+    {
+      "id": 2,
+      "title": "FF Diamond Topup Discount",
+      "image": "images/banners/1791115595.jpg",
+      "link": "topup.html?id=1",
+      "active": true
+    },
+    {
+      "id": 3,
+      "title": "Weekly Lite Flash Sale",
+      "image": "images/banners/1785487439.jpg",
+      "link": "flashsale.html",
+      "active": true
+    },
+    {
+      "id": 4,
+      "title": "Telegram Community",
+      "image": "images/banners/1787819158.jpg",
+      "link": "contactus.html",
+      "active": true
+    }
+  ]
+}
+
