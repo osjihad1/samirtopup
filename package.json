@@ -2,23 +2,10 @@
   "name": "samir-topup",
   "version": "1.0.0",
   "description": "Samir Topup - Fast & Reliable Game Topup Platform in Bangladesh",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node dev-server.js"
   },
-  "keywords": [
-    "topup",
-    "gaming",
-    "freefire",
-    "bkash",
-    "nagad",
-    "bangladesh"
-  ],
-  "author": "Samir Topup",
-  "license": "MIT",
   "dependencies": {
     "mongodb": "^6.8.0"
   }
 }
-
