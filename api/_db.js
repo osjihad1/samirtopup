@@ -48,9 +48,12 @@ async function connectMongo() {
     if (!global._mongoClientPromise) {
       const client = new MongoClient(MONGODB_URI, {
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000
+        serverSelectionTimeoutMS: 3000
       });
-      global._mongoClientPromise = client.connect();
+      global._mongoClientPromise = client.connect().catch(err => {
+        global._mongoClientPromise = null;
+        throw err;
+      });
     }
 
     cachedMongoClient = await global._mongoClientPromise;
@@ -58,6 +61,9 @@ async function connectMongo() {
     console.log(`✅ Connected to MongoDB Atlas: ${DB_NAME}`);
     return cachedDb;
   } catch (err) {
+    global._mongoClientPromise = null;
+    cachedDb = null;
+    cachedMongoClient = null;
     console.error("❌ MongoDB connection error:", err.message);
     return null;
   }
@@ -110,27 +116,88 @@ function saveDb(data) {
 // --- USERS ---
 async function findUser(query) {
   const db = await connectMongo();
-  if (db) {
-    const filter = {};
-    if (query.phone) filter.phone = query.phone;
-    if (query.email) filter.email = query.email;
-    if (query.id) filter.id = Number(query.id);
-    if (query.identifier) {
-      return await db.collection('users').findOne({
-        $or: [{ phone: query.identifier }, { email: query.identifier }]
-      });
+
+  // 1. Match by Identifier (can be Phone, Email, or Username)
+  if (query.identifier) {
+    const raw = String(query.identifier).trim();
+    const cleanDigits = raw.replace(/\D/g, '');
+    const phoneNorm = cleanDigits.startsWith('8801') ? cleanDigits.slice(2) : cleanDigits;
+    const cleanEmail = raw.toLowerCase();
+
+    if (db) {
+      const orClauses = [
+        { email: { $regex: `^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
+      ];
+      if (phoneNorm.length >= 10) {
+        orClauses.push({ phone: phoneNorm });
+        orClauses.push({ phone: '88' + phoneNorm });
+        orClauses.push({ phone: '+88' + phoneNorm });
+        orClauses.push({ phone: raw });
+      }
+      return await db.collection('users').findOne({ $or: orClauses });
     }
-    return await db.collection('users').findOne(filter);
+
+    const local = getDb();
+    return (local.users || []).find(u => {
+      const uEmail = (u.email || '').toLowerCase();
+      const uPhone = (u.phone || '').replace(/\D/g, '').replace(/^88/, '');
+      if (cleanEmail && uEmail === cleanEmail) return true;
+      if (phoneNorm && uPhone === phoneNorm) return true;
+      return u.phone === raw || u.email === raw;
+    });
   }
 
-  const local = getDb();
-  return local.users.find(u => {
-    if (query.identifier) return u.phone === query.identifier || u.email === query.identifier;
-    if (query.phone && u.phone === query.phone) return true;
-    if (query.email && u.email === query.email) return true;
-    if (query.id && (u.id == query.id || u._id == query.id)) return true;
-    return false;
-  });
+  // 2. Match by Phone
+  if (query.phone) {
+    const raw = String(query.phone).trim();
+    const cleanDigits = raw.replace(/\D/g, '');
+    const phoneNorm = cleanDigits.startsWith('8801') ? cleanDigits.slice(2) : cleanDigits;
+
+    if (db) {
+      const orClauses = [
+        { phone: raw },
+        { phone: phoneNorm },
+        { phone: '88' + phoneNorm },
+        { phone: '+88' + phoneNorm }
+      ];
+      return await db.collection('users').findOne({ $or: orClauses });
+    }
+
+    const local = getDb();
+    return (local.users || []).find(u => {
+      const uPhone = (u.phone || '').replace(/\D/g, '').replace(/^88/, '');
+      return uPhone === phoneNorm || u.phone === raw;
+    });
+  }
+
+  // 3. Match by Email (case-insensitive)
+  if (query.email) {
+    const cleanEmail = String(query.email).trim().toLowerCase();
+    if (db) {
+      return await db.collection('users').findOne({
+        email: { $regex: `^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' }
+      });
+    }
+
+    const local = getDb();
+    return (local.users || []).find(u => (u.email || '').toLowerCase() === cleanEmail);
+  }
+
+  // 4. Match by ID
+  if (query.id) {
+    const numId = Number(query.id);
+    const strId = String(query.id);
+    if (db) {
+      return await db.collection('users').findOne({
+        $or: [{ id: numId }, { id: strId }, { _id: strId }]
+      });
+    }
+
+    const local = getDb();
+    return (local.users || []).find(u => u.id == query.id || u._id == query.id);
+  }
+
+  return null;
 }
 
 async function createUser(user) {

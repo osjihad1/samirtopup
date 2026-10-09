@@ -294,17 +294,71 @@ const API = {
       if (res.ok && data.success) {
         this.setUser(data.user);
         if (data.token) this.setToken(data.token);
+        // Sync to local backup
+        let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
+        users = users.filter(u => u.phone !== data.user.phone && u.email !== data.user.email);
+        users.push({ ...data.user, password });
+        localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
         return { success: true, user: data.user, token: data.token };
+      } else if (res.status === 401 && data.error && (data.error.includes("পাওয়া যায়নি") || data.error.includes("not found"))) {
+        // Account might exist locally in localStorage from previous offline/dev session: check and auto-sync to server
+        let localUsers = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
+        const cleanDigits = cleanId.replace(/\D/g, '').replace(/^88/, '');
+        const match = localUsers.find(u => {
+          const uDigits = (u.phone || '').replace(/\D/g, '').replace(/^88/, '');
+          const uEmail = (u.email || '').toLowerCase();
+          const phoneMatch = cleanDigits && uDigits === cleanDigits;
+          const emailMatch = cleanId.includes('@') && uEmail === cleanId.toLowerCase();
+          return (phoneMatch || emailMatch || u.phone === cleanId || u.email === cleanId) && u.password === password;
+        });
+
+        if (match) {
+          // Auto-migrate account to serverless database
+          try {
+            const regRes = await fetch("/api/auth?action=register", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: match.name,
+                phone: match.phone,
+                email: match.email,
+                password: match.password,
+                captchaAnswer,
+                captchaToken
+              })
+            });
+            const regData = await regRes.json();
+            if (regRes.ok && regData.success) {
+              this.setUser(regData.user);
+              if (regData.token) this.setToken(regData.token);
+              return { success: true, user: regData.user, token: regData.token };
+            }
+          } catch (e) {}
+
+          match.balance = Number(match.balance) || 0;
+          this.setUser(match);
+          return { success: true, user: match };
+        }
+
+        return { success: false, message: data.error };
       } else if (res.status === 400 || res.status === 401) {
-        return { success: false, message: data.error || data.message || "Invalid credentials" };
+        return { success: false, message: data.error || data.message || "ভুল তথ্য বা পাসওয়ার্ড!" };
       }
     } catch(e) {
       console.warn("Server auth unreachable, using local fallback");
     }
 
-    // 3. Offline / LocalStorage Fallback - strictly match real stored accounts
+    // 2. Offline / LocalStorage Fallback
     let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-    let match = users.find(u => (u.email === cleanId || u.phone === cleanId) && u.password === password);
+    const cleanDigits = cleanId.replace(/\D/g, '').replace(/^88/, '');
+    let match = users.find(u => {
+      const uDigits = (u.phone || '').replace(/\D/g, '').replace(/^88/, '');
+      const uEmail = (u.email || '').toLowerCase();
+      const phoneMatch = cleanDigits && uDigits === cleanDigits;
+      const emailMatch = cleanId.includes('@') && uEmail === cleanId.toLowerCase();
+      return (phoneMatch || emailMatch || u.phone === cleanId || u.email === cleanId) && u.password === password;
+    });
     
     if (!match) {
       return { 
@@ -313,7 +367,6 @@ const API = {
       };
     }
 
-    // Ensure no unauthorized bonus balance
     match.balance = Number(match.balance) || 0;
     this.setUser(match);
     return { success: true, user: match };
@@ -366,6 +419,10 @@ const API = {
       if (res.ok && data.success) {
         this.setUser(data.user);
         if (data.token) this.setToken(data.token);
+        let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
+        users = users.filter(u => u.phone !== cleanPhone && u.email !== email);
+        users.push({ ...data.user, password: userData.password });
+        localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
         return { success: true, user: data.user, message: data.message };
       } else if (data.error) {
         return { success: false, message: data.error };
