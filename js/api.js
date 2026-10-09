@@ -51,6 +51,24 @@ const API = {
     }
   },
 
+  // Live settings fetch from server (always fresh from MongoDB)
+  async getSettingsLive() {
+    try {
+      const res = await fetch("/api/settings", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const serverSettings = data.settings || {};
+        if (serverSettings && Object.keys(serverSettings).length > 0) {
+          const defaults = this.getSettings();
+          const merged = { ...defaults, ...serverSettings };
+          localStorage.setItem("samirtopup_settings", JSON.stringify(merged));
+          return merged;
+        }
+      }
+    } catch (e) {}
+    return this.getSettings();
+  },
+
   async saveSettings(settings) {
     const current = this.getSettings();
     const updated = { ...current, ...settings };

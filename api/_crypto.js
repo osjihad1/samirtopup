@@ -79,50 +79,29 @@ function verifySessionToken(token) {
 
 // 3. Bot-Proof Visual & Math Captcha Generator
 function generateCaptcha() {
-  const isMath = Math.random() > 0.3; // 70% math puzzle, 30% alphanumeric
-  let text = '';
-  let answer = '';
-
-  if (isMath) {
-    const n1 = Math.floor(Math.random() * 20) + 1;
-    const n2 = Math.floor(Math.random() * 10) + 1;
-    const ops = ['+', '-'];
-    const op = (n1 >= n2) ? ops[Math.floor(Math.random() * ops.length)] : '+';
-    
-    if (op === '+') {
-      answer = String(n1 + n2);
-      text = `${n1} + ${n2} = ?`;
-    } else {
-      answer = String(n1 - n2);
-      text = `${n1} - ${n2} = ?`;
-    }
-  } else {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    for (let i = 0; i < 5; i++) {
-      text += chars[Math.floor(Math.random() * chars.length)];
-    }
-    answer = text.toUpperCase();
-  }
+  // Super easy addition within 10 as requested (e.g. 2 + 2, 3 + 4)
+  const n1 = Math.floor(Math.random() * 5) + 1; // 1 to 5
+  const n2 = Math.floor(Math.random() * (10 - n1)) + 1; // sum will be <= 10
+  const answer = String(n1 + n2);
+  const text = `${n1} + ${n2} = ?`;
 
   // Generate SVG with gaming cyber noise, wavy lines, and colorful text
   const width = 180;
   const height = 50;
   const colors = ['#ff6702', '#38bdf8', '#f43f5e', '#10b981', '#fbbf24'];
-  const noiseLines = Array.from({ length: 4 }).map(() => {
+  const noiseLines = Array.from({ length: 2 }).map(() => {
     const x1 = Math.floor(Math.random() * width);
     const y1 = Math.floor(Math.random() * height);
     const x2 = Math.floor(Math.random() * width);
     const y2 = Math.floor(Math.random() * height);
-    const col = colors[Math.floor(Math.random() * colors.length)];
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="1.5" opacity="0.35"/>`;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#38bdf8" stroke-width="1" opacity="0.2"/>`;
   }).join('');
 
   const charElements = text.split('').map((ch, i) => {
-    const x = 20 + i * (width / (text.length + 1.5));
-    const y = 33 + Math.floor(Math.random() * 6 - 3);
-    const rot = Math.floor(Math.random() * 24 - 12);
+    const x = 24 + i * (width / (text.length + 1.2));
+    const y = 33;
     const col = colors[i % colors.length];
-    return `<text x="${x}" y="${y}" fill="${col}" font-size="22" font-family="'Courier New', monospace" font-weight="900" transform="rotate(${rot} ${x} ${y})">${ch}</text>`;
+    return `<text x="${x}" y="${y}" fill="${col}" font-size="24" font-family="'Courier New', monospace" font-weight="900">${ch}</text>`;
   }).join('');
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: #021222; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
@@ -141,7 +120,7 @@ function generateCaptcha() {
     captchaId: crypto.randomBytes(8).toString('hex'),
     svg,
     token,
-    prompt: isMath ? 'Solve the math puzzle' : 'Enter the code above'
+    prompt: 'গণিত সমাধান করুন'
   };
 }
 

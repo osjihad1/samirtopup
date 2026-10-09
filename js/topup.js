@@ -214,10 +214,10 @@ async function handleCheckout() {
     return;
   }
 
-  openPaymentModal(playerId, price);
+  await openPaymentModal(playerId, price);
 }
 
-function openPaymentModal(playerId, amount) {
+async function openPaymentModal(playerId, amount) {
   const modal = document.getElementById("paymentModal");
   const amtEl = document.getElementById("payModalAmount");
   const uidEl = document.getElementById("payModalUid");
@@ -226,7 +226,7 @@ function openPaymentModal(playerId, amount) {
   if (amtEl) amtEl.textContent = `৳${amount}`;
   if (uidEl) uidEl.textContent = playerId;
 
-  const settings = API.getSettings ? API.getSettings() : {};
+  const settings = (API.getSettingsLive ? await API.getSettingsLive() : API.getSettings()) || {};
   if (selectedPaymentMethod === "bkash") {
     if (numEl) numEl.innerHTML = `Send Money to bKash (${settings.bkash_type || 'Personal'}): <strong style="color: #e2136e; font-size: 16px;">${settings.bkash_number || '01700000000'}</strong>`;
   } else if (selectedPaymentMethod === "nagad") {

@@ -218,13 +218,13 @@
 
           <div style="background: #041c30; padding: 12px; border-radius: 10px; border: 1px solid #1a3a5c; margin-bottom: 16px;">
             <p id="walletMethodInstruction" style="font-size: 13px; color: #cbd5e1;">
-              bKash Personal Number: <strong style="color: #f43f5e;">01712-345678</strong> (Send Money করুন)
+              লোড হচ্ছে...
             </p>
           </div>
 
           <div style="margin-bottom: 16px;">
             <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Amount (৳ BDT)</label>
-            <input type="number" id="walletAmountInput" class="input-field" placeholder="Minimum 50 ৳" min="50" required value="200">
+            <input type="number" id="walletAmountInput" class="input-field" placeholder="Minimum 50 ৳" min="50" required>
           </div>
 
           <div style="margin-bottom: 20px;">
@@ -379,6 +379,11 @@
       renderOrdersTable();
       renderTxnTable();
 
+      // Initialize live wallet payment numbers from server
+      if (typeof initWalletPaymentInfo === 'function') {
+        initWalletPaymentInfo();
+      }
+
       // Check URL query parameters for tab navigation (e.g. ?tab=addwallet)
       const urlParams = new URLSearchParams(window.location.search);
       const reqTab = urlParams.get("tab");
@@ -497,22 +502,32 @@
       });
     }
 
+    // Holds live settings for wallet panel
+    let _liveSettings = null;
+
+    function updateWalletInstruction(method, settings) {
+      const instr = document.getElementById("walletMethodInstruction");
+      if (!instr) return;
+      if (method === 'bKash') {
+        instr.innerHTML = `bKash (${settings.bkash_type || 'Personal'}): <strong style="color: #f43f5e; font-size: 15px;">${settings.bkash_number || '01700000000'}</strong> (Send Money করুন)`;
+      } else if (method === 'Nagad') {
+        instr.innerHTML = `Nagad (${settings.nagad_type || 'Personal'}): <strong style="color: #f97316; font-size: 15px;">${settings.nagad_number || '01800000000'}</strong> (Send Money করুন)`;
+      } else {
+        instr.innerHTML = `Rocket: <strong style="color: #8c338c; font-size: 15px;">${settings.rocket_number || '01900000000'}</strong> (Send Money করুন)`;
+      }
+    }
+
+    async function initWalletPaymentInfo() {
+      _liveSettings = await API.getSettingsLive();
+      updateWalletInstruction(activeWalletMethod, _liveSettings);
+    }
+
     function selectWalletMethod(method, el) {
       activeWalletMethod = method;
       document.querySelectorAll(".payment-method-card").forEach(c => c.classList.remove("active"));
       el.classList.add("active");
-      const instr = document.getElementById("walletMethodInstruction");
-      const settings = API.getSettings ? API.getSettings() : {};
-
-      if (instr) {
-        if (method === 'bKash') {
-          instr.innerHTML = `bKash (${settings.bkash_type || 'Personal'}): <strong style="color: #f43f5e; font-size: 15px;">${settings.bkash_number || '01712-345678'}</strong> (Send Money করুন)`;
-        } else if (method === 'Nagad') {
-          instr.innerHTML = `Nagad (${settings.nagad_type || 'Personal'}): <strong style="color: #f97316; font-size: 15px;">${settings.nagad_number || '01812-345678'}</strong> (Send Money করুন)`;
-        } else {
-          instr.innerHTML = `Rocket: <strong style="color: #8c338c; font-size: 15px;">${settings.rocket_number || '01912-345678'}</strong> (Send Money করুন)`;
-        }
-      }
+      const settings = _liveSettings || API.getSettings();
+      updateWalletInstruction(method, settings);
     }
 
     async function handleAddWalletSubmit(e) {

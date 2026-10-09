@@ -1228,6 +1228,11 @@
             document.getElementById("statTotalUsers").textContent = data.stats.totalUsers || 0;
             document.getElementById("statPendingReqs").textContent = data.stats.pendingWalletReqs || 0;
           }
+          if (data.settings && Object.keys(data.settings).length > 0) {
+            siteSettings = { ...siteSettings, ...data.settings };
+            localStorage.setItem("samirtopup_settings", JSON.stringify(siteSettings));
+            updateMaintenancePill();
+          }
         }
       } catch (e) {}
 
@@ -1359,6 +1364,9 @@
       document.getElementById("payNagadNum").value = siteSettings.nagad_number || "01800000000";
       document.getElementById("payNagadType").value = siteSettings.nagad_type || "Personal (Send Money)";
       document.getElementById("payRocketNum").value = siteSettings.rocket_number || "01900000000";
+      if (document.getElementById("payMinDeposit")) {
+        document.getElementById("payMinDeposit").value = siteSettings.min_deposit || 50;
+      }
 
       // Spin & Flash Sale
       document.getElementById("spinCostInput").value = siteSettings.spin_cost || 5;
@@ -1508,7 +1516,7 @@
     }
 
     // Payment Numbers
-    function savePaymentNumbers(e) {
+    async function savePaymentNumbers(e) {
       e.preventDefault();
       siteSettings.bkash_number = document.getElementById("payBkashNum").value.trim();
       siteSettings.bkash_type = document.getElementById("payBkashType").value;
@@ -1517,7 +1525,11 @@
       siteSettings.rocket_number = document.getElementById("payRocketNum").value.trim();
       siteSettings.min_deposit = document.getElementById("payMinDeposit").value;
 
-      API.saveSettings(siteSettings);
+      const btn = e.target.querySelector("button[type='submit']");
+      const origText = btn ? btn.textContent : "";
+      if (btn) btn.textContent = "সংরক্ষণ করা হচ্ছে...";
+      await API.saveSettings(siteSettings);
+      if (btn) btn.textContent = origText;
       alert("✅ Payment numbers updated! Customers will now see these numbers on checkout and wallet recharge.");
     }
 
