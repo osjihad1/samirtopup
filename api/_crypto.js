@@ -339,26 +339,6 @@ function verifyAdminRequest(req) {
   return verifyAdminToken(token);
 }
 
-function touchAdminSession(req, res) {
-  const auth = verifyAdminRequest(req);
-  if (!auth.valid) return auth;
-  const admin = auth.admin || {};
-  const token = createAdminSessionToken({
-    id: admin.id || 1,
-    name: admin.name || 'Samir Topup Master',
-    username: admin.username || 'admin',
-    role: 'super_admin'
-  }, 30 * 60 * 1000);
-  setAdminCookie(res, token, 30 * 60);
-  return { valid: true, admin: { ...admin, role: 'super_admin', isAdmin: true } };
-}
-  const token = extractTokenFromRequest(req);
-  if (!token) {
-    return { valid: false, error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন কুকি বা টোকেন প্রয়োজন (Unauthorized)' };
-  }
-  return verifyAdminToken(token);
-}
-
 function checkAdminCredentials(username, password) {
   if (!username || !password) return false;
   const cleanUser = String(username).trim();
@@ -393,7 +373,6 @@ module.exports = {
   createAdminSessionToken,
   verifyAdminToken,
   verifyAdminRequest,
-  touchAdminSession,
   checkAdminCredentials,
   parseCookies,
   setSessionCookie,

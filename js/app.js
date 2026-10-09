@@ -1,4 +1,11 @@
 // Global Ultra-Smooth Application Logic & Animation Engine for SAMIR TOPUP
+function escapeText(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+window.escapeText = escapeText;
+window.escapeHtml = escapeText;
+
 document.addEventListener("DOMContentLoaded", async () => {
   checkMaintenanceMode();
   initProgressBar();
@@ -330,10 +337,23 @@ async function initBannerCarousel() {
   const slider = document.getElementById("heroCarousel");
   if (!slider) return;
 
-  const banners = await API.getBanners();
-  if (!banners || banners.length === 0) return;
+  let banners = [];
+  try {
+    banners = await API.getBanners();
+  } catch (e) {
+    console.error("Error fetching banners:", e);
+  }
 
-  const activeBanners = banners.filter(b => b.active !== false);
+  if (!Array.isArray(banners) || banners.length === 0) {
+    banners = [
+      { id: 1, title: "Special Event Service", image: "images/event_banner.jpg", link: "contactus.html", active: true },
+      { id: 2, title: "Topup Discount", image: "images/banners/1791115595.jpg", link: "topup.html?id=1", active: true },
+      { id: 3, title: "Weekly Lite Flash Sale", image: "images/banners/1785487439.jpg", link: "flashsale.html", active: true },
+      { id: 4, title: "Telegram Community", image: "images/banners/1787819158.jpg", link: "contactus.html", active: true }
+    ];
+  }
+
+  const activeBanners = banners.filter(b => b && b.active !== false);
   if (activeBanners.length === 0) return;
 
   slider.innerHTML = "";
@@ -343,11 +363,27 @@ async function initBannerCarousel() {
   activeBanners.forEach((b, idx) => {
     const slide = document.createElement("div");
     slide.className = `carousel-slide ${idx === 0 ? "active" : ""}`;
-    const imgUrl = b.image || (b.logo ? API.getImageUrl("banners", b.logo) : "images/banners/1791115595.jpg");
+    const imgUrl = (b.image && b.image.trim()) || (b.logo ? (API.getImageUrl ? API.getImageUrl("banners", b.logo) : b.logo) : "images/banners/1791115595.jpg");
     const safeLink = sanitizeUrl(b.link);
-    const clickAction = (safeLink && safeLink !== '#') ? `window.location.href='${encodeURI(safeLink)}'` : `openEventModal()`;
 
-    slide.innerHTML = `<img src="${encodeURI(imgUrl)}" alt="${escapeText(b.title || `Banner ${idx + 1}`)}" onclick="${clickAction}" style="cursor: pointer;" onerror="this.src='images/banners/1791115595.jpg'">`;
+    const img = document.createElement("img");
+    img.src = imgUrl;
+    img.alt = b.title || `Banner ${idx + 1}`;
+    img.style.cursor = "pointer";
+    img.onerror = function() {
+      if (this.src.indexOf("1791115595.jpg") === -1) {
+        this.src = "images/banners/1791115595.jpg";
+      }
+    };
+    img.onclick = () => {
+      if (safeLink && safeLink !== "#") {
+        window.location.href = safeLink;
+      } else if (typeof window.openEventModal === "function") {
+        window.openEventModal();
+      }
+    };
+
+    slide.appendChild(img);
     slider.appendChild(slide);
 
     if (dotsContainer) {

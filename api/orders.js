@@ -11,12 +11,10 @@ const {
   setCors,
   createAuditLog,
   findCoupon,
-  incrementCouponUse,
-  adjustBalanceAtomic
+  incrementCouponUse
 } = require('./_db');
-const { verifyUserRequest, verifyAdminRequest, touchAdminSession } = require('./_crypto');
+const { verifyUserRequest, verifyAdminRequest } = require('./_crypto');
 const { sendTelegramAlert } = require('./_telegram');
-const { resolveOrderPrice } = require('./_catalog');
 
 module.exports = async function handler(req, res) {
   setCors(res, req);
@@ -105,10 +103,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (dbUser.blocked === true || dbUser.status === 'blocked') {
-      return res.status(403).json({ error: 'এই অ্যাকাউন্ট ব্লক করা হয়েছে। অর্ডার করা যাবে না।' });
-    }
-
     const data = await parseBody(req);
     const { product, package: pkgName, playerId, amount, method, trxId } = data;
 
@@ -116,21 +110,10 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'প্রোডাক্ট এবং টাকার পরিমাণ আবশ্যক' });
     }
 
-    const orderAmountCheck = parseFloat(amount);
-    if (isNaN(orderAmountCheck) || orderAmountCheck < 0) {
-      return res.status(400).json({ error: 'অবৈধ অর্ডারের পরিমাণ!' });
+    const orderAmount = parseFloat(amount);
+    if (isNaN(orderAmount) || orderAmount < 10) {
+      return res.status(400).json({ error: 'অবৈধ অর্ডারের পরিমাণ! সর্বনিম্ন ১০ ৳ হতে হবে।' });
     }
-
-    const priceCheck = await resolveOrderPrice({
-      productId: data.productId,
-      packageId: data.packageId,
-      productName: product,
-      packageName: pkgName,
-      submittedAmount: orderAmountCheck,
-      couponCode: data.coupon || data.couponCode
-    });
-    if (!priceCheck.ok) return res.status(400).json({ error: priceCheck.error });
-    const orderAmount = priceCheck.amount;
 
     // Allowed Payment Methods Verification
     const validMethods = ['bKash', 'Nagad', 'Rocket', 'Wallet'];
@@ -170,14 +153,17 @@ module.exports = async function handler(req, res) {
     // 3. Wallet Balance Check & Atomic Deduction using verified dbUser
     let newBalance = undefined;
     if (matchedMethod === 'Wallet') {
-      const debit = await adjustBalanceAtomic(dbUser.id, -orderAmount, {}, { spend: true });
-      if (!debit.ok) {
-        const currentBal = Number(dbUser.balance) || 0;
+      const currentBal = Number(dbUser.balance) || 0;
+      if (currentBal < orderAmount) {
         return res.status(400).json({ 
           error: `অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! বর্তমান ব্যালেন্স: ${currentBal} ৳, প্রয়োজন: ${orderAmount} ৳। আগে Add Money করুন।` 
         });
       }
-      newBalance = debit.user.balance;
+      newBalance = Math.max(0, currentBal - orderAmount);
+      await updateUser(dbUser.id, {
+        balance: newBalance,
+        total_spend: (Number(dbUser.total_spend) || 0) + orderAmount
+      });
     }
 
     const newOrder = {
@@ -188,8 +174,6 @@ module.exports = async function handler(req, res) {
       phone: dbUser.phone || sessionUser.phone || '01700000000',
       product,
       package: pkgName || 'Topup Package',
-      package_id: priceCheck.packageId || null,
-      product_id: priceCheck.productId || data.productId || null,
       playerId: cleanPlayerId || 'N/A',
       amount: orderAmount,
       method: method || 'bKash',
@@ -197,10 +181,6 @@ module.exports = async function handler(req, res) {
       status: method === 'Wallet' ? 'Processing' : 'Pending',
       created_at: new Date().toISOString()
     };
-
-    if (priceCheck.couponCode && priceCheck.discount > 0) {
-      try { await incrementCouponUse(priceCheck.couponCode); } catch (e) {}
-    }
 
     await createOrderDoc(newOrder);
 
@@ -224,7 +204,7 @@ module.exports = async function handler(req, res) {
   // PUT: Update Order Status (Admin action)
   // ==========================================
   if (req.method === 'PUT') {
-    const auth = touchAdminSession(req, res);
+    const auth = verifyAdminRequest(req);
     if (!auth.valid) {
       return res.status(401).json({ error: 'Unauthorized: Admin authentication required to update order status' });
     }
@@ -245,18 +225,18 @@ module.exports = async function handler(req, res) {
     const previousStatus = order.status;
 
     // Refund logic: If cancelled and was paid by wallet, refund
-    if (status === 'Cancelled' && previousStatus !== 'Cancelled' && order.method && String(order.method).toLowerCase() === 'wallet') {
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled' && order.method === 'Wallet') {
       const user = await findUser({ phone: order.phone });
       if (user) {
-        const refund = await adjustBalanceAtomic(user.id, Number(order.amount) || 0, {
-          total_spend: Math.max(0, (Number(user.total_spend) || 0) - (Number(order.amount) || 0))
+        await updateUser(user.id, {
+          balance: (user.balance || 0) + order.amount
         });
         await createAuditLog({
           who: auth.admin?.name || 'Admin',
           action: 'ORDER_REFUND',
           target: orderId,
-          before: { balance: user.balance, status: previousStatus },
-          after: { balance: refund.ok ? refund.user.balance : user.balance, status: 'Cancelled' },
+          before: { balance: user.balance },
+          after: { balance: (user.balance || 0) + order.amount },
           details: `Order ${orderId} cancelled, refunded ${order.amount} ৳ to user ${user.id}`
         });
       }

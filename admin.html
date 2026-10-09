@@ -1182,9 +1182,6 @@
 
     // Load All Dashboard Data
     async function loadDashboardData() {
-      const token = sessionStorage.getItem("samirtopup_admin_token");
-      const authHeaders = token ? { "Authorization": "Bearer " + token } : {};
-
       // 1. Load settings
       siteSettings = API.getSettings();
       updateMaintenancePill();
@@ -1195,7 +1192,7 @@
 
       // 3. Load orders & users from API or Local
       try {
-        const res = await fetch("/api/admin", { headers: authHeaders, credentials: "include" });
+        const res = await fetch("/api/admin", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           adminOrders = data.recentOrders || [];
@@ -1243,11 +1240,9 @@
 
     async function cleanAllDemoData() {
       if (!confirm("আপনি কি নিশ্চিত যে সকল ডেমো ইউজার এবং ডেমো অর্ডার মুছে ফেলতে চান?")) return;
-      const token = sessionStorage.getItem("samirtopup_admin_token");
       try {
         await fetch("/api/admin?action=clean_demo", {
-          credentials: "include",
-          headers: token ? { "Authorization": "Bearer " + token } : {}
+          credentials: "include"
         });
       } catch (e) {}
 
@@ -1603,14 +1598,12 @@
       order.status = newStatus;
       localStorage.setItem("samirtopup_orders", JSON.stringify(adminOrders));
 
-      const token = sessionStorage.getItem("samirtopup_admin_token");
       try {
         await fetch("/api/orders", {
           method: "PUT",
           credentials: "include",
           headers: { 
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": "Bearer " + token } : {})
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ orderId, status: newStatus })
         });
@@ -1669,15 +1662,13 @@
       const item = adminWalletReqs.find(r => r.id === requestId);
       if (!item) return;
 
-      const token = sessionStorage.getItem("samirtopup_admin_token");
       // 1. Call Serverless / MongoDB API
       try {
         const res = await fetch("/api/wallet", {
           method: "PUT",
           credentials: "include",
           headers: { 
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": "Bearer " + token } : {})
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ requestId, action })
         });
@@ -1752,14 +1743,12 @@
       localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
       renderUsersTable();
 
-      const token = sessionStorage.getItem("samirtopup_admin_token");
       try {
         await fetch("/api/admin?action=adjust_balance", {
           method: "POST",
           credentials: "include",
           headers: {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": "Bearer " + token } : {})
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             userId,

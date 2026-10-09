@@ -82,3 +82,4 @@ TELEGRAM_ADMIN_CHAT_ID=<your-telegram-numeric-chat-id>
 - **Authentication**: Zero JWTs exposed in JavaScript. HttpOnly, SameSite=Lax, Secure cookies manage both customer and admin sessions.
 - **Protection**: Brute-force rate limiting, atomic wallet balance deductions, server-side duplicate TrxID guard, and Cloudflare Turnstile bot verification.
 - **Data Privacy**: Public ticker and leaderboard anonymise customer names (e.g. `Sa***n K.`) and never expose phone numbers or balances.
+

@@ -42,3 +42,4 @@ BREAKING CHANGES:
 Admin authentication now strictly requires HttpOnly cookie support; API callers can no longer extract or supply tokens via JavaScript sessionStorage.
 Password reset page (forgetpassword.html) no longer submits simulated resets and redirects directly to official Telegram support.
 Existing orders using legacy demo names are now preserved and only records explicitly having isDemo: true will be excluded.
+

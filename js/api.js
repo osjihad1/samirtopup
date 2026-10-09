@@ -74,15 +74,13 @@ const API = {
     const updated = { ...current, ...settings };
     localStorage.setItem("samirtopup_settings", JSON.stringify(updated));
 
-    // Try syncing to serverless API with admin token if available
+    // Try syncing to serverless API with admin cookie
     try {
-      const adminTok = sessionStorage.getItem("samirtopup_admin_token");
       await fetch("/api/settings", {
         method: "POST",
         credentials: "include",
         headers: { 
-          "Content-Type": "application/json",
-          ...(adminTok ? { "Authorization": "Bearer " + adminTok } : {})
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ settings: updated })
       });
@@ -111,13 +109,11 @@ const API = {
   async saveBanners(banners) {
     localStorage.setItem("samirtopup_banners", JSON.stringify(banners));
     try {
-      const adminTok = sessionStorage.getItem("samirtopup_admin_token");
       await fetch("/api/settings", {
         method: "POST",
         credentials: "include",
         headers: { 
-          "Content-Type": "application/json",
-          ...(adminTok ? { "Authorization": "Bearer " + adminTok } : {})
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ banners })
       });

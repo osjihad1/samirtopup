@@ -25,3 +25,4 @@ try {
   console.error('Failed to build catalog:', e.message);
   process.exit(1);
 }
+
