@@ -9,7 +9,6 @@ const {
   getSettingsData, 
   parseBody, 
   setCors,
-  purgeDemoData,
   createAuditLog,
   findAuditLogs
 } = require('./_db');
@@ -116,16 +115,6 @@ module.exports = async function handler(req, res) {
     if (!auth.valid) {
       return res.status(401).json({
         error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন টোকেন প্রয়োজন (401 Unauthorized)'
-      });
-    }
-
-    // 3. Purge all legacy demo users, demo orders, and demo requests permanently
-    await purgeDemoData();
-
-    if (action === 'clean_demo') {
-      return res.status(200).json({ 
-        success: true, 
-        message: 'সকল ডেমো ইউজার এবং ডেমো অর্ডার সফলভাবে মুছে ফেলা হয়েছে।' 
       });
     }
 

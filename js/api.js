@@ -590,49 +590,6 @@ const API = {
       return `images/${type}/${last}`;
     }
     return `images/${type}/${filename}`;
-  },
-
-  // Clean legacy demo data: only records explicitly marked with isDemo: true
-  cleanDemoData() {
-    try {
-      const rawOrders = localStorage.getItem("samirtopup_orders");
-      if (rawOrders) {
-        const parsed = JSON.parse(rawOrders);
-        if (Array.isArray(parsed)) {
-          const cleanOrders = parsed.filter(o => o && !o.isDemo);
-          localStorage.setItem("samirtopup_orders", JSON.stringify(cleanOrders));
-        }
-      }
-      localStorage.removeItem("SamirTopup_orders");
-
-      const rawAccs = localStorage.getItem("samirtopup_accounts");
-      if (rawAccs) {
-        const parsed = JSON.parse(rawAccs);
-        if (Array.isArray(parsed)) {
-          const cleanAccs = parsed.filter(a => a && !a.isDemo && a.role !== "demo");
-          localStorage.setItem("samirtopup_accounts", JSON.stringify(cleanAccs));
-        }
-      }
-
-      const rawReqs = localStorage.getItem("samirtopup_wallet_requests");
-      if (rawReqs) {
-        const parsed = JSON.parse(rawReqs);
-        if (Array.isArray(parsed)) {
-          const cleanReqs = parsed.filter(r => r && !r.isDemo);
-          localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(cleanReqs));
-        }
-      }
-
-      const user = this.getUser();
-      if (user && user.isDemo === true) {
-        this.setUser(null);
-      }
-    } catch (e) {}
   }
 };
-
-// Immediate Execution on Load to Clean Client State
-try {
-  API.cleanDemoData();
-} catch (e) {}
 

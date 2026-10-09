@@ -567,9 +567,6 @@
     </div>
 
     <div class="admin-nav-actions">
-      <button onclick="cleanAllDemoData()" class="btn-site-preview" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; cursor: pointer;">
-        <span>🧹 ডেমো ডাটা মুছুন</span>
-      </button>
       <a href="index.html" target="_blank" class="btn-site-preview">
         <span>👁️ Visit Live Shop</span>
       </a>
@@ -1161,7 +1158,11 @@
           err.style.display = "block";
         }
       } catch (ex) {
-        err.textContent = "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। ইন্টারনেট সংযোগ চেক করুন।";
+        if (window.location.protocol === 'file:') {
+          err.textContent = "সরাসরি ফাইল (file://) দিয়ে API কাজ করে না। লাইভ সাইটে অথবা 'npm run dev' (http://localhost:3000) দিয়ে ওপেন করুন।";
+        } else {
+          err.textContent = "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। ইন্টারনেট সংযোগ চেক করুন।";
+        }
         err.style.display = "block";
       } finally {
         btn.disabled = false;
@@ -1224,54 +1225,17 @@
         adminOrders = API.getOrders();
       }
 
-      // Only filter records explicitly marked with isDemo: true
-      adminOrders = (adminOrders || []).filter(o => o && !o.isDemo);
-
       adminWalletReqs = JSON.parse(localStorage.getItem("samirtopup_wallet_requests") || "[]");
-      adminWalletReqs = (adminWalletReqs || []).filter(r => r && !r.isDemo);
-      localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(adminWalletReqs));
 
       if (!adminUsers || adminUsers.length === 0) {
         adminUsers = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
       }
-      adminUsers = (adminUsers || []).filter(u => u && !u.isDemo && u.role !== "demo");
-      localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
 
       updateMetrics();
       renderOrdersTable();
       renderWalletTable();
       renderUsersTable();
       populateFormFields();
-    }
-
-    async function cleanAllDemoData() {
-      if (!confirm("আপনি কি নিশ্চিত যে সকল ডেমো ইউজার এবং ডেমো অর্ডার মুছে ফেলতে চান?")) return;
-      try {
-        await fetch("/api/admin?action=clean_demo", {
-          credentials: "include"
-        });
-      } catch (e) {}
-
-      if (typeof API !== 'undefined' && API.cleanDemoData) {
-        API.cleanDemoData();
-      }
-      localStorage.removeItem("samirtopup_orders");
-      localStorage.removeItem("SamirTopup_orders");
-      localStorage.removeItem("samirtopup_wallet_requests");
-
-      adminOrders = [];
-      adminWalletReqs = [];
-      const accs = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000", "01711111111"];
-      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer", "Demo User", "Samir Admin"];
-      adminUsers = accs.filter(u => !demoPhones.includes(u.phone) && !demoNames.includes(u.name) && !u.isDemo && u.role !== 'demo');
-      localStorage.setItem("samirtopup_accounts", JSON.stringify(adminUsers));
-
-      updateMetrics();
-      renderOrdersTable();
-      renderWalletTable();
-      renderUsersTable();
-      alert("✅ সকল ডেমো ইউজার এবং ডেমো অর্ডার সফলভাবে মুছে ফেলা হয়েছে!");
     }
 
     function updateMaintenancePill() {
