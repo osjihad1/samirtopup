@@ -190,6 +190,10 @@ module.exports = async function handler(req, res) {
   // 3. User Login: POST /api/auth?action=login
   // ==========================================
   if (req.method === 'POST') {
+    if (await isMaintenanceMode()) {
+      return res.status(503).json({ error: 'সাইটটিতে বর্তমানে রক্ষণাবেক্ষণ (Maintenance Mode) চলছে। সাময়িকভাবে লগইন বন্ধ রয়েছে।' });
+    }
+
     const data = await parseBody(req);
     const { identifier, password, captchaAnswer, captchaToken, turnstileToken } = data;
     if (typeof identifier !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'অবৈধ তথ্য' });

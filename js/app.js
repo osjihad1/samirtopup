@@ -6,7 +6,10 @@ function escapeText(str) {
 window.escapeText = escapeText;
 window.escapeHtml = escapeText;
 
-document.addEventListener("DOMContentLoaded", async () => {
+// Run immediate maintenance check on script evaluation
+checkMaintenanceMode();
+
+function initApp() {
   checkMaintenanceMode();
   initProgressBar();
   initSmoothTransitions();
@@ -22,34 +25,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   initOrdersStream();
   initNoticeModal();
   initEventAnnouncementModal();
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
+}
 
 // 0. Maintenance Mode Handler (Live Server Check with MongoDB)
 async function checkMaintenanceMode() {
-  if (window.location.pathname.endsWith("admin.html")) return;
+  const path = (window.location.pathname || "").toLowerCase();
+  // Do NOT block admin access on /admin or admin.html
+  if (path === "/admin" || path.endsWith("/admin") || path.endsWith("admin.html") || path.includes("/admin.")) {
+    return;
+  }
 
   // 1. Instant check from local cache
-  const localSettings = (typeof API !== 'undefined' && API.getSettings) ? API.getSettings() : {};
-  if (localSettings && (localSettings.maintenance_mode === true || localSettings.maintenance_mode === 'true')) {
-    showMaintenanceScreen(localSettings);
-  }
+  try {
+    const cached = JSON.parse(localStorage.getItem("samirtopup_settings") || "{}");
+    const isMaintCached = (cached.maintenance_mode === true || cached.maintenance_mode === 'true' || cached.maintenance_mode === 1 || cached.maintenance_mode === '1');
+    if (isMaintCached) {
+      showMaintenanceScreen(cached);
+    }
+  } catch (e) {}
 
   // 2. Authoritative live check from MongoDB /api/settings
   try {
     const res = await fetch("/api/settings?_t=" + Date.now(), {
-      headers: { "Cache-Control": "no-cache" }
+      headers: { "Cache-Control": "no-cache, no-store, must-revalidate" }
     });
     if (res.ok) {
       const data = await res.json();
       const s = data.settings || {};
-      const isMaint = (s.maintenance_mode === true || s.maintenance_mode === 'true');
+      const isMaint = (s.maintenance_mode === true || s.maintenance_mode === 'true' || s.maintenance_mode === 1 || s.maintenance_mode === '1');
+      
+      // Sync authoritative status to local cache
+      try {
+        const cur = JSON.parse(localStorage.getItem("samirtopup_settings") || "{}");
+        cur.maintenance_mode = isMaint;
+        if (s.maintenance_message) cur.maintenance_message = s.maintenance_message;
+        if (s.maintenance_eta) cur.maintenance_eta = s.maintenance_eta;
+        localStorage.setItem("samirtopup_settings", JSON.stringify(cur));
+      } catch(e) {}
+
       if (isMaint) {
         showMaintenanceScreen(s);
       } else {
         const overlay = document.getElementById("maintenanceOverlay");
         if (overlay) {
           overlay.remove();
-          document.body.style.overflow = "";
+          if (document.body) document.body.style.overflow = "";
         }
       }
     }
@@ -59,29 +85,41 @@ async function checkMaintenanceMode() {
 function showMaintenanceScreen(settings) {
   if (document.getElementById("maintenanceOverlay")) return;
 
-  const overlay = document.createElement("div");
-  overlay.id = "maintenanceOverlay";
-  overlay.innerHTML = `
-    <div class="maintenance-card">
-      <div class="maintenance-icon-glow">⚙️</div>
-      <h1 class="maintenance-title">UNDER MAINTENANCE</h1>
-      <div class="maintenance-badge">🚧 সাময়িক রক্ষণাবেক্ষণ চলছে</div>
-      <p class="maintenance-msg">${settings.maintenance_message || 'আমাদের সার্ভার আপগ্রেডেশনের কাজ চলছে। খুব দ্রুতই সেবা পুনরায় চালু হবে।'}</p>
-      <div class="maintenance-eta">
-        <span>⏱️ সম্ভাব্য সময়:</span> <strong>${settings.maintenance_eta || 'খুব শীঘ্রই'}</strong>
+  const doRender = () => {
+    if (document.getElementById("maintenanceOverlay")) return;
+    const target = document.body || document.documentElement;
+    if (!target) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "maintenanceOverlay";
+    overlay.innerHTML = `
+      <div class="maintenance-card">
+        <div class="maintenance-icon-glow">⚙️</div>
+        <h1 class="maintenance-title">UNDER MAINTENANCE</h1>
+        <div class="maintenance-badge">🚧 সাময়িক রক্ষণাবেক্ষণ চলছে</div>
+        <p class="maintenance-msg">${escapeText(settings.maintenance_message) || 'আমাদের সার্ভার আপগ্রেডেশনের কাজ চলছে। খুব দ্রুতই সেবা পুনরায় চালু হবে।'}</p>
+        <div class="maintenance-eta">
+          <span>⏱️ সম্ভাব্য সময়:</span> <strong>${escapeText(settings.maintenance_eta) || 'খুব শীঘ্রই'}</strong>
+        </div>
+        <div class="maintenance-buttons">
+          <a href="${sanitizeUrl(settings.telegram_link) || 'https://t.me/samirtopup'}" target="_blank" class="btn-buy-now" style="width: auto; padding: 12px 24px; text-decoration: none;">
+            💬 টেলিগ্রাম হেল্পলাইন
+          </a>
+          <a href="admin.html" class="btn-login" style="padding: 12px 18px; font-size: 13px; text-decoration: none;">
+            🔐 Admin Login
+          </a>
+        </div>
       </div>
-      <div class="maintenance-buttons">
-        <a href="${settings.telegram_link || 'https://t.me/samirtopup'}" target="_blank" class="btn-buy-now" style="width: auto; padding: 12px 24px; text-decoration: none;">
-          💬 টেলিগ্রাম হেল্পলাইন
-        </a>
-        <a href="admin.html" class="btn-login" style="padding: 12px 18px; font-size: 13px; text-decoration: none;">
-          🔐 Admin Login
-        </a>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  document.body.style.overflow = "hidden";
+    `;
+    target.appendChild(overlay);
+    if (document.body) document.body.style.overflow = "hidden";
+  };
+
+  if (document.body) {
+    doRender();
+  } else {
+    document.addEventListener("DOMContentLoaded", doRender);
+  }
 }
 
 // 1. Top Loading Bar on Navigation

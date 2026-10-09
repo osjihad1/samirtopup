@@ -343,22 +343,65 @@ async function getSettingsData() {
   const db = await connectMongo();
   if (db) {
     const doc = await db.collection('settings').findOne({ _id: 'global_settings' });
-    if (doc) return doc.data || doc;
+    if (doc) {
+      const dataObj = (doc.data && typeof doc.data === 'object') ? doc.data : {};
+      const merged = { ...doc, ...dataObj };
+      delete merged._id;
+      delete merged.data;
+      if (merged.maintenance_mode !== undefined) {
+        merged.maintenance_mode = (
+          merged.maintenance_mode === true || 
+          merged.maintenance_mode === 'true' || 
+          merged.maintenance_mode === 1 || 
+          merged.maintenance_mode === '1'
+        );
+      }
+      return merged;
+    }
   }
-  return getDb().settings || {};
+  const local = getDb().settings || {};
+  if (local.maintenance_mode !== undefined) {
+    local.maintenance_mode = (
+      local.maintenance_mode === true || 
+      local.maintenance_mode === 'true' || 
+      local.maintenance_mode === 1 || 
+      local.maintenance_mode === '1'
+    );
+  }
+  return local;
 }
 
 async function saveSettingsData(settings) {
+  const cleanSettings = { ...settings };
+  delete cleanSettings._id;
+  delete cleanSettings.data;
+
+  if (cleanSettings.maintenance_mode !== undefined) {
+    cleanSettings.maintenance_mode = (
+      cleanSettings.maintenance_mode === true || 
+      cleanSettings.maintenance_mode === 'true' || 
+      cleanSettings.maintenance_mode === 1 || 
+      cleanSettings.maintenance_mode === '1'
+    );
+  }
+
   const db = await connectMongo();
   if (db) {
     await db.collection('settings').updateOne(
       { _id: 'global_settings' },
-      { $set: { data: settings, updated_at: new Date() } },
+      { 
+        $set: { 
+          ...cleanSettings, 
+          data: cleanSettings, 
+          maintenance_mode: cleanSettings.maintenance_mode,
+          updated_at: new Date() 
+        } 
+      },
       { upsert: true }
     );
   }
   const local = getDb();
-  local.settings = { ...local.settings, ...settings };
+  local.settings = { ...local.settings, ...cleanSettings };
   saveDb(local);
   return local.settings;
 }
@@ -367,7 +410,12 @@ async function isMaintenanceMode() {
   try {
     const settings = await getSettingsData();
     if (!settings) return false;
-    return settings.maintenance_mode === true || settings.maintenance_mode === 'true' || settings.maintenance_mode === 1 || settings.maintenance_mode === '1';
+    return (
+      settings.maintenance_mode === true || 
+      settings.maintenance_mode === 'true' || 
+      settings.maintenance_mode === 1 || 
+      settings.maintenance_mode === '1'
+    );
   } catch (e) {
     return false;
   }

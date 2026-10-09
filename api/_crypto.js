@@ -267,9 +267,6 @@ function clearUserCookie(res) {
   const secureFlag = isSecure ? '; Secure' : '';
   const cookieStr = `${COOKIE_USER_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax; HttpOnly${secureFlag}`;
   appendCookieHeader(res, cookieStr);
-  if (isSecure) {
-    appendCookieHeader(res, `${COOKIE_USER_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax; HttpOnly`);
-  }
 }
 
 function clearAdminCookie(res) {
@@ -277,9 +274,6 @@ function clearAdminCookie(res) {
   const secureFlag = isSecure ? '; Secure' : '';
   const cookieStr = `${COOKIE_ADMIN_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax; HttpOnly${secureFlag}`;
   appendCookieHeader(res, cookieStr);
-  if (isSecure) {
-    appendCookieHeader(res, `${COOKIE_ADMIN_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax; HttpOnly`);
-  }
 }
 
 function extractUserToken(req) {
