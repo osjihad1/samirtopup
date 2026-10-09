@@ -224,38 +224,91 @@
 
   </main>
 
-  <!-- Payment Checkout Modal -->
+  <!-- Payment Checkout Modal (For bKash, Nagad, Rocket) -->
   <div class="modal-overlay" id="paymentModal">
-    <div class="modal-card">
+    <div class="modal-card checkout-pay-modal">
       <button class="modal-close" onclick="closePaymentModal()">&times;</button>
-      <div style="text-align: center; margin-bottom: 18px;">
-        <h3 style="font-size: 20px; font-weight: 800; color: #fff;">Complete Payment</h3>
-        <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;"><span id="payModalUidLabel">Player UID:</span> <strong id="payModalUid" style="color: #38bdf8;"></strong></p>
+      
+      <!-- Modal Header -->
+      <div class="pay-modal-header">
+        <div class="pay-method-pill" id="payModalMethodBadge">
+          <span class="pay-method-dot"></span>
+          <span id="payModalMethodName">bKash Instant Pay</span>
+        </div>
+        <h3 class="pay-modal-title">পেমেন্ট ও অর্ডার নিশ্চিতকরণ</h3>
+        <p class="pay-modal-sub">
+          <span id="payModalUidLabel">Player UID:</span> 
+          <strong id="payModalUid" class="pay-target-highlight"></strong>
+        </p>
       </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <span style="color: #94a3b8; font-size: 13px;">Payable Amount:</span>
-          <strong id="payModalAmount" style="color: #ff6702; font-size: 18px;">৳80</strong>
+      <!-- Payable Amount Highlight Box -->
+      <div class="pay-amount-box">
+        <div class="pay-amount-info">
+          <span class="pay-amount-label">পরিশোধযোগ্য মোট টাকা</span>
+          <span class="pay-package-tag" id="payModalPackageSummary">115 Diamonds</span>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-          <p id="payModalNumber" style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin: 0;"></p>
-          <button id="copyPayNumBtn" type="button" onclick="copyPaymentNumber()" style="background: rgba(255, 103, 2, 0.2); border: 1px solid #ff6702; color: #ff6702; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
-            📋 Copy Number
+        <div class="pay-amount-val" id="payModalAmount">৳80</div>
+      </div>
+
+      <!-- Send Money Number & Copy Card -->
+      <div class="pay-number-card">
+        <div class="pay-number-top">
+          <span class="pay-number-tag" id="payModalNumberLabel">bKash (Personal) - Send Money</span>
+          <span class="pay-badge-verified">✓ ভেরিফাইড নম্বর</span>
+        </div>
+        <div class="pay-number-body">
+          <div class="pay-number-text" id="payModalNumberVal">01700000000</div>
+          <button id="copyPayNumBtn" type="button" onclick="copyPaymentNumber()" class="pay-copy-btn">
+            <span id="copyBtnIcon">📋</span> <span id="copyBtnText">কপি করুন</span>
           </button>
         </div>
       </div>
 
-      <div style="margin-bottom: 16px;">
-        <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
-          Transaction ID (TrxID)
-        </label>
-        <input type="text" id="trxIdInput" class="input-field" placeholder="e.g. 9B8C7D6E5F">
-        <p style="font-size: 11px; color: #64748b; margin-top: 4px;">পেমেন্ট শেষে পাওয়া ট্রানজেকশন আইডিটি এখানে দিন।</p>
+      <!-- 3-Step Payment Guide -->
+      <div class="pay-guide-box">
+        <div class="pay-guide-step">
+          <span class="pay-step-badge">১</span>
+          <span>উপরের নম্বরে বিকাশ/নগদ অ্যাপ থেকে <strong>Send Money</strong> করুন</span>
+        </div>
+        <div class="pay-guide-step">
+          <span class="pay-step-badge">২</span>
+          <span>টাকা পাঠানোর পর এসএমএস বা অ্যাপের ইনবক্স থেকে <strong>TrxID</strong> কপি করুন</span>
+        </div>
+        <div class="pay-guide-step">
+          <span class="pay-step-badge">৩</span>
+          <span>নিচে সেই TrxID বসিয়ে <strong>কনফার্ম বাটনে</strong> চাপ দিন</span>
+        </div>
       </div>
 
-      <button onclick="confirmPayment()" class="btn-buy-now">
-        Confirm & Submit Order
-      </button>
+      <!-- Redesigned TrxID Input Box -->
+      <div class="pay-trx-wrapper">
+        <label class="pay-trx-label" for="trxIdInput">
+          <span>🔑 Transaction ID (TrxID) বসান</span>
+          <span class="pay-trx-req">*বাধ্যতামূলক</span>
+        </label>
+        <div class="pay-trx-input-box">
+          <span class="pay-trx-icon">#</span>
+          <input type="text" id="trxIdInput" class="pay-trx-input" placeholder="e.g. BL9A8C7D2E বা TrxID পেস্ট করুন" autocomplete="off" spellcheck="false">
+          <button type="button" onclick="pasteTrxId()" class="pay-trx-paste-btn" title="ক্লিপবোর্ড থেকে পেস্ট করুন">
+            📋 Paste
+          </button>
+        </div>
+        <div class="pay-trx-hint">
+          <span>💡 বিকাশ বা নগদের মেসেজ থেকে ৮-১০ ডিজিটের ট্রানজেকশন আইডি দিন</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pay-modal-actions">
+        <button id="btnConfirmPay" onclick="confirmPayment()" class="btn-buy-now pay-confirm-btn">
+          <span>⚡ Confirm & Submit Order</span>
+        </button>
+        <button type="button" onclick="closePaymentModal()" class="pay-cancel-btn">
+          ✕ ফিরে যান / বাতিল করুন
+        </button>
+      </div>
+
     </div>
   </div>
 

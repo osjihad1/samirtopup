@@ -252,22 +252,74 @@ async function handleCheckout() {
 
   const price = Math.max(0, (selectedPackage.amount || 0) - appliedDiscount);
 
-  // Sync latest balance from MongoDB/server
-  if (API.syncUserBalance) {
-    try { await API.syncUserBalance(); } catch(e) {}
-  }
-  const updatedUser = API.getUser() || user;
-  const currentBal = Number(updatedUser.balance) || 0;
+  // ==========================================
+  // 1. WALLET PAYMENT: Deduct directly, NO TrxID!
+  // ==========================================
+  if (selectedPaymentMethod === "wallet") {
+    // Sync latest balance from MongoDB/server
+    if (API.syncUserBalance) {
+      try { await API.syncUserBalance(); } catch (e) {}
+    }
+    const updatedUser = API.getUser() || user;
+    const currentBal = Number(updatedUser.balance) || 0;
 
-  // STRICT BALANCE CHECK: Order will NOT be accepted if balance is insufficient
-  if (currentBal < price) {
-    showToast(`⚠️ অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! বর্তমান ব্যালেন্স: ${currentBal} ৳, প্রয়োজন: ${price} ৳। আগে Add Money করুন।`, "error");
-    setTimeout(() => { 
-      window.location.href = "profile.html?tab=addwallet"; 
-    }, 1500);
+    if (currentBal < price) {
+      showToast(`⚠️ ওয়ালেটে পর্যাপ্ত ব্যালেন্স নেই! বর্তমান ব্যালেন্স: ${currentBal} ৳, প্রয়োজন: ${price} ৳। আগে Add Money করুন।`, "error");
+      setTimeout(() => { 
+        window.location.href = "profile.html?tab=addwallet"; 
+      }, 1500);
+      return;
+    }
+
+    // Direct deduction & instant order submission (Zero TrxID prompt!)
+    const buyBtn = document.querySelector(".btn-buy-now");
+    if (buyBtn) {
+      buyBtn.disabled = true;
+      buyBtn.innerHTML = "<span>⏳ ওয়ালেট থেকে প্রসেস হচ্ছে...</span>";
+    }
+
+    try {
+      const res = await API.createOrder({
+        product: currentProduct?.name || "Game Topup",
+        package: selectedPackage.name,
+        playerId,
+        amount: price,
+        method: "Wallet",
+        trxId: "WLT-" + Date.now()
+      });
+
+      if (buyBtn) {
+        buyBtn.disabled = false;
+        buyBtn.innerHTML = "<span>⚡ BUY NOW</span>";
+      }
+
+      if (!res.success || res.error) {
+        showToast(res.error || "অর্ডার সম্পন্ন হতে সমস্যা হয়েছে!", "error");
+        return;
+      }
+
+      if (API.syncUserBalance) {
+        try { await API.syncUserBalance(); } catch (e) {}
+      }
+
+      showToast(`✅ ওয়ালেট থেকে ৳${price} কেটে নেওয়া হয়েছে! অর্ডার সফল!`, "success");
+      setTimeout(() => {
+        window.location.href = `paymentsuccess.html?orderId=${res.order.id}&amount=${price}`;
+      }, 700);
+    } catch (err) {
+      if (buyBtn) {
+        buyBtn.disabled = false;
+        buyBtn.innerHTML = "<span>⚡ BUY NOW</span>";
+      }
+      showToast("অর্ডার ব্যর্থ হয়েছে: " + err.message, "error");
+    }
     return;
   }
 
+  // ==========================================
+  // 2. bKash / Nagad / Rocket:
+  // ZERO Wallet balance check! Open payment modal
+  // ==========================================
   await openPaymentModal(playerId, price);
 }
 
@@ -278,43 +330,91 @@ async function openPaymentModal(playerId, amount) {
   const amtEl = document.getElementById("payModalAmount");
   const uidEl = document.getElementById("payModalUid");
   const uidLabelEl = document.getElementById("payModalUidLabel");
-  const numEl = document.getElementById("payModalNumber");
-  const copyBtn = document.getElementById("copyPayNumBtn");
+  const numValEl = document.getElementById("payModalNumberVal");
+  const numLabelEl = document.getElementById("payModalNumberLabel");
+  const methodNameEl = document.getElementById("payModalMethodName");
+  const methodBadgeEl = document.getElementById("payModalMethodBadge");
+  const pkgSummaryEl = document.getElementById("payModalPackageSummary");
+  const trxInput = document.getElementById("trxIdInput");
   const isSocial = /facebook|follower|page|react|social|tiktok|instagram|youtube/i.test(currentProduct?.name || '');
 
+  if (trxInput) trxInput.value = "";
   if (amtEl) amtEl.textContent = `৳${amount}`;
   if (uidEl) uidEl.textContent = playerId;
   if (uidLabelEl) uidLabelEl.textContent = isSocial ? "Facebook Link:" : "Player UID:";
+  if (pkgSummaryEl) pkgSummaryEl.textContent = `${currentProduct?.name || ''} (${selectedPackage?.name || ''})`;
 
   const settings = (API.getSettingsLive ? await API.getSettingsLive() : API.getSettings()) || {};
+
   if (selectedPaymentMethod === "bkash") {
     activePaymentNumber = settings.bkash_number || '01700000000';
-    if (numEl) numEl.innerHTML = `Send Money to bKash (${settings.bkash_type || 'Personal'}): <strong style="color: #e2136e; font-size: 16px;">${activePaymentNumber}</strong>`;
-    if (copyBtn) copyBtn.style.display = "inline-block";
+    if (numValEl) numValEl.textContent = activePaymentNumber;
+    if (numLabelEl) numLabelEl.textContent = `bKash (${settings.bkash_type || 'Personal'}) - Send Money`;
+    if (methodNameEl) methodNameEl.textContent = "bKash Instant Pay";
+    if (methodBadgeEl) {
+      methodBadgeEl.style.color = "#e2136e";
+      methodBadgeEl.style.borderColor = "rgba(226, 19, 110, 0.4)";
+      methodBadgeEl.style.background = "rgba(226, 19, 110, 0.15)";
+    }
   } else if (selectedPaymentMethod === "nagad") {
     activePaymentNumber = settings.nagad_number || '01800000000';
-    if (numEl) numEl.innerHTML = `Send Money to Nagad (${settings.nagad_type || 'Personal'}): <strong style="color: #f7941d; font-size: 16px;">${activePaymentNumber}</strong>`;
-    if (copyBtn) copyBtn.style.display = "inline-block";
+    if (numValEl) numValEl.textContent = activePaymentNumber;
+    if (numLabelEl) numLabelEl.textContent = `Nagad (${settings.nagad_type || 'Personal'}) - Send Money`;
+    if (methodNameEl) methodNameEl.textContent = "Nagad Instant Pay";
+    if (methodBadgeEl) {
+      methodBadgeEl.style.color = "#f97316";
+      methodBadgeEl.style.borderColor = "rgba(249, 115, 22, 0.4)";
+      methodBadgeEl.style.background = "rgba(249, 115, 22, 0.15)";
+    }
   } else if (selectedPaymentMethod === "rocket") {
     activePaymentNumber = settings.rocket_number || '01900000000';
-    if (numEl) numEl.innerHTML = `Send Money to Rocket: <strong style="color: #8c338c; font-size: 16px;">${activePaymentNumber}</strong>`;
-    if (copyBtn) copyBtn.style.display = "inline-block";
-  } else {
-    activePaymentNumber = "";
-    if (numEl) numEl.innerHTML = `Payment will be deducted directly from your SAMIR TOPUP Wallet balance.`;
-    if (copyBtn) copyBtn.style.display = "none";
+    if (numValEl) numValEl.textContent = activePaymentNumber;
+    if (numLabelEl) numLabelEl.textContent = `Rocket - Send Money`;
+    if (methodNameEl) methodNameEl.textContent = "Rocket Pay";
+    if (methodBadgeEl) {
+      methodBadgeEl.style.color = "#a855f7";
+      methodBadgeEl.style.borderColor = "rgba(168, 85, 247, 0.4)";
+      methodBadgeEl.style.background = "rgba(168, 85, 247, 0.15)";
+    }
   }
 
   if (modal) modal.classList.add("active");
+  setTimeout(() => {
+    if (trxInput) trxInput.focus();
+  }, 200);
 }
 
 function copyPaymentNumber() {
   if (!activePaymentNumber) return;
   navigator.clipboard.writeText(activePaymentNumber).then(() => {
+    const btnText = document.getElementById("copyBtnText");
+    const btnIcon = document.getElementById("copyBtnIcon");
+    if (btnText) btnText.textContent = "কপি হয়েছে!";
+    if (btnIcon) btnIcon.textContent = "✓";
     showToast(`নম্বর কপি হয়েছে: ${activePaymentNumber}`, "success");
+    setTimeout(() => {
+      if (btnText) btnText.textContent = "কপি করুন";
+      if (btnIcon) btnIcon.textContent = "📋";
+    }, 2500);
   }).catch(() => {
     showToast(`নম্বর: ${activePaymentNumber}`, "info");
   });
+}
+
+async function pasteTrxId() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      const input = document.getElementById("trxIdInput");
+      if (input) {
+        input.value = text.trim().toUpperCase();
+        showToast("TrxID পেস্ট করা হয়েছে!", "success");
+      }
+    }
+  } catch (e) {
+    const input = document.getElementById("trxIdInput");
+    if (input) input.focus();
+  }
 }
 
 function closePaymentModal() {
@@ -330,54 +430,54 @@ async function confirmPayment() {
     return;
   }
 
-  const price = Math.max(0, (selectedPackage.amount || 0) - appliedDiscount);
-  const currentBal = Number(user.balance) || 0;
-
-  if (currentBal < price) {
-    showToast(`⚠️ অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! আগে Add Money করুন।`, "error");
-    setTimeout(() => { window.location.href = "profile.html?tab=addwallet"; }, 1500);
-    return;
-  }
-
   const trxInput = document.getElementById("trxIdInput");
-  const trxId = trxInput ? trxInput.value.trim() : "WLT-" + Date.now();
+  const trxId = trxInput ? trxInput.value.trim().toUpperCase() : "";
 
-  if (selectedPaymentMethod !== "wallet" && (!trxId || trxId.length < 5)) {
-    showToast("Please enter the Transaction ID (TrxID)!", "error");
+  if (!trxId || trxId.length < 6) {
+    showToast("অনুগ্রহ করে বিকাশ/নগদের সঠিক Transaction ID (TrxID) দিন!", "error");
+    if (trxInput) trxInput.focus();
     return;
   }
 
   const playerId = document.getElementById("playerIdInput")?.value || "N/A";
-  const amount = Math.max(0, (selectedPackage.amount || 0) - appliedDiscount);
+  const amount = Math.max(0, (selectedPackage?.amount || 0) - appliedDiscount);
 
-  const confirmBtn = document.querySelector("#paymentModal .btn-buy-now");
+  const confirmBtn = document.getElementById("btnConfirmPay");
   if (confirmBtn) {
     confirmBtn.disabled = true;
-    confirmBtn.textContent = "অর্ডার যাচাই করা হচ্ছে...";
+    confirmBtn.innerHTML = "<span>⏳ ভেরিফাই ও অর্ডার সাবমিট হচ্ছে...</span>";
   }
 
-  const res = await API.createOrder({
-    product: currentProduct?.name || "Free Fire Topup",
-    package: selectedPackage.name,
-    playerId,
-    amount,
-    method: selectedPaymentMethod,
-    trxId
-  });
+  try {
+    const res = await API.createOrder({
+      product: currentProduct?.name || "Game Topup",
+      package: selectedPackage.name,
+      playerId,
+      amount,
+      method: selectedPaymentMethod,
+      trxId
+    });
 
-  if (confirmBtn) {
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = "Confirm Payment";
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = "<span>⚡ Confirm & Submit Order</span>";
+    }
+
+    if (!res.success || res.error) {
+      showToast(res.error || "অর্ডার সম্পন্ন হতে সমস্যা হয়েছে!", "error");
+      return;
+    }
+
+    closePaymentModal();
+    showToast("✅ অর্ডার সফলভাবে জমা হয়েছে! শীঘ্রই ডেলিভারি দেওয়া হবে।", "success");
+    setTimeout(() => {
+      window.location.href = `paymentsuccess.html?orderId=${res.order.id}&amount=${amount}`;
+    }, 800);
+  } catch (err) {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = "<span>⚡ Confirm & Submit Order</span>";
+    }
+    showToast("অর্ডার ব্যর্থ হয়েছে: " + err.message, "error");
   }
-
-  if (!res.success || res.error) {
-    showToast(res.error || "অর্ডার সম্পন্ন হতে সমস্যা হয়েছে!", "error");
-    return;
-  }
-
-  closePaymentModal();
-  showToast("Order placed successfully! Redirecting...", "success");
-  setTimeout(() => {
-    window.location.href = `paymentsuccess.html?orderId=${res.order.id}&amount=${amount}`;
-  }, 1000);
 }
