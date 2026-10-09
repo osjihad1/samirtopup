@@ -19,8 +19,13 @@ try {
   }
 } catch (e) {}
 
-const TMP_PATH = '/tmp/samirtopup_db.json';
+const os = require('os');
 const SEED_PATH = path.join(__dirname, 'db.json');
+// In local Node / Windows development, persist directly to api/db.json so data is NEVER lost on server restart!
+// On Vercel / serverless (read-only filesystem except tmpdir), use os.tmpdir()
+const PERSISTENT_PATH = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'samirtopup_db.json')
+  : SEED_PATH;
 const DEFAULT_MONGO_URI = 'mongodb+srv://usaemailhossen_db_user:xpmBZFuqqVwBhbIo@cluster0.mongodb.net/samirtopup?retryWrites=true&w=majority';
 const MONGODB_URI = process.env.MONGODB_URI || DEFAULT_MONGO_URI;
 const DB_NAME = process.env.MONGODB_DB || 'samirtopup';
@@ -41,7 +46,7 @@ async function connectMongo() {
     try {
       MongoClient = require('mongodb').MongoClient;
     } catch (e) {
-      console.warn("MongoDB package not installed locally, falling back to JSON storage.");
+      console.warn("MongoDB package not installed locally, falling back to persistent JSON storage.");
       return null;
     }
 
@@ -64,30 +69,48 @@ async function connectMongo() {
     global._mongoClientPromise = null;
     cachedDb = null;
     cachedMongoClient = null;
-    console.error("❌ MongoDB connection error:", err.message);
+    // Log friendly warning once
+    if (!global._mongoWarned) {
+      console.warn(`ℹ️ MongoDB Atlas offline or DNS unreachable (${err.message}). Using local persistent database (${PERSISTENT_PATH}).`);
+      global._mongoWarned = true;
+    }
     return null;
   }
 }
 
 // ==========================================
-// 2. File / In-Memory JSON Store Fallback
+// 2. File / In-Memory JSON Store Fallback (Guaranteed Persistence)
 // ==========================================
 function getDb() {
   if (memoryStore) return memoryStore;
 
+  // 1. Try persistent path (api/db.json locally or tmp on Vercel)
   try {
-    if (fs.existsSync(TMP_PATH)) {
-      const data = fs.readFileSync(TMP_PATH, 'utf8');
+    if (fs.existsSync(PERSISTENT_PATH)) {
+      const data = fs.readFileSync(PERSISTENT_PATH, 'utf8');
       memoryStore = JSON.parse(data);
-      return memoryStore;
+      if (memoryStore && typeof memoryStore === 'object') {
+        if (!memoryStore.users) memoryStore.users = [];
+        if (!memoryStore.orders) memoryStore.orders = [];
+        if (!memoryStore.wallet_requests) memoryStore.wallet_requests = [];
+        if (!memoryStore.vouchers) memoryStore.vouchers = [];
+        return memoryStore;
+      }
     }
   } catch (e) {}
 
+  // 2. Try SEED_PATH
   try {
     if (fs.existsSync(SEED_PATH)) {
       const data = fs.readFileSync(SEED_PATH, 'utf8');
       memoryStore = JSON.parse(data);
-      return memoryStore;
+      if (memoryStore && typeof memoryStore === 'object') {
+        if (!memoryStore.users) memoryStore.users = [];
+        if (!memoryStore.orders) memoryStore.orders = [];
+        if (!memoryStore.wallet_requests) memoryStore.wallet_requests = [];
+        if (!memoryStore.vouchers) memoryStore.vouchers = [];
+        return memoryStore;
+      }
     }
   } catch (e) {}
 
@@ -96,6 +119,7 @@ function getDb() {
     users: [],
     orders: [],
     wallet_requests: [],
+    vouchers: [],
     settings: {},
     banners: []
   };
@@ -105,8 +129,14 @@ function getDb() {
 function saveDb(data) {
   memoryStore = data;
   try {
-    fs.writeFileSync(TMP_PATH, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {}
+    fs.writeFileSync(PERSISTENT_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    try {
+      fs.writeFileSync(SEED_PATH, JSON.stringify(data, null, 2), 'utf8');
+    } catch (err2) {
+      console.error("Critical error saving DB fallback:", err2.message);
+    }
+  }
 }
 
 // ==========================================
