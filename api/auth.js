@@ -1,6 +1,7 @@
 // Vercel Serverless Function: /api/auth
 // Features: Server-side Field Validation, Bot-Proof Captcha, Scrypt Password Hashing, HttpOnly Cookie Sessions & MongoDB
-const { findUser, createUser, parseBody, setCors } = require('./_db');
+const { findUser, createUser, parseBody, setCors, hitLimit } = require('./_db');
+const clientIp = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'ip';
 const { 
   hashPassword, 
   verifyPassword, 
@@ -65,7 +66,8 @@ module.exports = async function handler(req, res) {
       // Direct API probing protection: only authenticated user or admin can query user profiles
       const userAuth = verifyUserRequest(req);
       const adminAuth = verifyAdminRequest(req);
-      if (!adminAuth.valid && (!userAuth.valid || (phone && userAuth.payload?.phone !== phone))) {
+      const isSelf = userAuth.valid && ((id && String(userAuth.payload.id) === String(id)) || (phone && userAuth.payload.phone === phone));
+      if (!adminAuth.valid && !isSelf) {
         return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস! শুধুমাত্র লগইন করা ব্যবহারকারী নিজের প্রোফাইল দেখতে পারেন।' });
       }
 
@@ -84,6 +86,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST' && action === 'register') {
     const data = await parseBody(req);
     const { name, phone, email, password, captchaAnswer, captchaToken } = data;
+    if (!(await hitLimit('reg:' + clientIp(req), 10, 60 * 60 * 1000))) return res.status(429).json({ error: 'অনেকবার চেষ্টা করা হয়েছে। পরে আবার চেষ্টা করুন।' });
 
     // A. Captcha Verification
     if (!captchaAnswer || !captchaToken) {
@@ -146,7 +149,7 @@ module.exports = async function handler(req, res) {
     const { salt, hash } = hashPassword(password);
 
     const newUser = {
-      id: Math.floor(10000 + Math.random() * 90000),
+      id: require('crypto').randomUUID(),
       name: cleanName,
       phone: cleanPhone,
       email: cleanEmail,
@@ -179,6 +182,8 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     const data = await parseBody(req);
     const { identifier, password, captchaAnswer, captchaToken } = data;
+    if (typeof identifier !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'অবৈধ তথ্য' });
+    if (!(await hitLimit('login:' + clientIp(req) + ':' + identifier.toLowerCase(), 8, 15 * 60 * 1000)) || !(await hitLimit('loginip:' + clientIp(req), 40, 15 * 60 * 1000))) return res.status(429).json({ error: 'অতিরিক্ত ভুল চেষ্টা! ১৫ মিনিট পরে আবার চেষ্টা করুন।' });
 
     if (!identifier || !password) {
       return res.status(400).json({ error: 'মোবাইল/ইমেইল এবং পাসওয়ার্ড আবশ্যক' });
@@ -195,19 +200,17 @@ module.exports = async function handler(req, res) {
     const user = await findUser({ identifier: cleanId });
 
     if (!user) {
-      return res.status(401).json({ error: 'ব্যবহারকারী পাওয়া যায়নি! সঠিক তথ্য দিন অথবা নতুন একাউন্ট খুলুন।' });
+      return res.status(401).json({ error: 'মোবাইল/ইমেইল অথবা পাসওয়ার্ড সঠিক নয়!' });
     }
 
     // Verify Password (supports both hashed password and legacy plain passwords)
     let isPasswordCorrect = false;
     if (user.salt && user.hash) {
       isPasswordCorrect = verifyPassword(password, user.salt, user.hash);
-    } else if (user.password) {
-      isPasswordCorrect = (user.password === password);
     }
 
     if (!isPasswordCorrect) {
-      return res.status(401).json({ error: 'ভুল পাসওয়ার্ড! অনুগ্রহ করে আবার চেষ্টা করুন।' });
+      return res.status(401).json({ error: 'মোবাইল/ইমেইল অথবা পাসওয়ার্ড সঠিক নয়!' });
     }
 
     // Generate Session Token & HttpOnly Cookie

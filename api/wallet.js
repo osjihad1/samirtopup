@@ -1,174 +1,67 @@
-// Vercel Serverless Function: /api/wallet
-// Features: MongoDB Integration, Server-Side Duplicate TrxID Guard & Auto Balance Credit
-const { 
-  findWalletRequests, 
-  createWalletRequestDoc, 
-  updateWalletRequestStatus, 
-  isTrxIdDuplicate, 
-  findUser, 
-  updateUser, 
-  parseBody, 
-  setCors 
-} = require('./_db');
+// /api/wallet - validated deposits, one-time approval, credit by user id.
+const crypto = require('crypto');
+const { findWalletRequests, createWalletRequestDoc, updateWalletRequestStatus, claimTrx, findUser, creditBalance, approveWalletOnce, parseBody, setCors, hitLimit } = require('./_db');
 const { verifyUserRequest, verifyAdminRequest } = require('./_crypto');
+const METHODS = ['bKash', 'Nagad', 'Rocket'];
 
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
+  try {
+    if (req.method === 'GET') {
+      const admin = verifyAdminRequest(req).valid;
+      if (admin) return res.status(200).json(await findWalletRequests());
+      const u = verifyUserRequest(req);
+      if (!u.valid) return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(200).json((await findWalletRequests()).filter(r => String(r.user_id) === String(u.payload.id)));
+    }
 
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    if (req.method === 'POST') {
+      const auth = verifyUserRequest(req);
+      if (!auth.valid) return res.status(401).json({ error: auth.error });
+      const dbUser = await findUser({ id: auth.payload.id });
+      if (!dbUser) return res.status(401).json({ error: 'অ্যাকাউন্ট পাওয়া যায়নি।' });
+      if (!(await hitLimit('dep:' + dbUser.id, 5, 60 * 60 * 1000))) return res.status(429).json({ error: 'অনেক রিকোয়েস্ট! পরে চেষ্টা করুন।' });
 
-  // GET: List wallet deposit requests (Secured per request)
-  if (req.method === 'GET') {
-    const phone = url.searchParams.get('phone');
-    if (phone) {
-      const userAuth = verifyUserRequest(req);
-      const adminAuth = verifyAdminRequest(req);
-      if (!adminAuth.valid && (!userAuth.valid || userAuth.payload?.phone !== phone)) {
-        return res.status(401).json({ 
-          error: 'অননুমোদিত অ্যাক্সেস! ওয়ালেট হিস্ট্রি দেখতে ভ্যালিড ইউজার কুকি দিয়ে লগইন করুন।' 
-        });
+      const { amount, method, sender_number, trxId } = await parseBody(req);
+      const amt = Number(amount);
+      if (!Number.isFinite(amt) || amt < 20 || amt > 50000) return res.status(400).json({ error: 'টাকার পরিমাণ ২০ থেকে ৫০,০০০ ৳ এর মধ্যে হতে হবে' });
+      const m = METHODS.find(x => x.toLowerCase() === String(method || '').toLowerCase());
+      if (!m) return res.status(400).json({ error: 'অবৈধ পেমেন্ট মাধ্যম' });
+      const trx = String(trxId || '').trim().toUpperCase();
+      if (!/^[A-Z0-9]{8,20}$/.test(trx) || /^(.)\1{7,}$/.test(trx)) return res.status(400).json({ error: 'সঠিক Transaction ID দিন' });
+      if (!(await claimTrx(trx))) return res.status(400).json({ error: 'এই Transaction ID আগেই ব্যবহার হয়েছে!' });
+      const sender = String(sender_number || dbUser.phone || '').replace(/[^\d+]/g, '').slice(0, 15);
+
+      const reqDoc = { id: 'REQ-' + crypto.randomBytes(5).toString('hex').toUpperCase(), user_id: dbUser.id, user_name: dbUser.name || 'Customer',
+        phone: dbUser.phone || '', amount: amt, method: m, sender_number: sender, trxId: trx, status: 'Pending',
+        date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }), created_at: new Date().toISOString() };
+      await createWalletRequestDoc(reqDoc);
+      return res.status(201).json({ success: true, request: reqDoc });
+    }
+
+    if (req.method === 'PUT') {
+      if (!verifyAdminRequest(req).valid) return res.status(401).json({ error: 'Unauthorized' });
+      const { requestId, action } = await parseBody(req);
+      if (typeof requestId !== 'string') return res.status(400).json({ error: 'requestId required' });
+      if (action === 'approve') {
+        const doc = await approveWalletOnce(requestId);               // Pending -> Approved, once only
+        if (!doc) return res.status(409).json({ error: 'Request not found or already processed' });
+        const newBalance = await creditBalance(doc.user_id, doc.amount);
+        if (newBalance === null) { await updateWalletRequestStatus(requestId, 'Pending'); return res.status(409).json({ error: 'User not found - request left Pending' }); }
+        return res.status(200).json({ success: true, message: `${doc.amount} ৳ যুক্ত হয়েছে।`, newBalance, phone: doc.phone });
       }
-
-      const all = await findWalletRequests();
-      const userReqs = all.filter(r => r.phone === phone);
-      return res.status(200).json(userReqs);
+      if (action === 'reject') {
+        const cur = (await findWalletRequests()).find(r => r.id === requestId);
+        if (!cur || cur.status !== 'Pending') return res.status(409).json({ error: 'Request not found or already processed' });
+        await updateWalletRequestStatus(requestId, 'Rejected');
+        return res.status(200).json({ success: true, message: 'Rejected' });
+      }
+      return res.status(400).json({ error: 'Invalid action' });
     }
-
-    // Viewing all wallet requests requires verified admin authentication
-    const auth = verifyAdminRequest(req);
-    if (!auth.valid) {
-      return res.status(401).json({ error: 'Unauthorized: Admin authentication required to view all deposit requests' });
-    }
-
-    const all = await findWalletRequests();
-    return res.status(200).json(all);
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (e) {
+    console.error('wallet error:', e.message);
+    return res.status(500).json({ error: 'Server error' });
   }
-
-  // POST: Submit add-money deposit request (Zero Direct API Access without Valid User Cookie)
-  if (req.method === 'POST') {
-    // 1. Mandatory Cookie Check
-    const auth = verifyUserRequest(req);
-    if (!auth.valid) {
-      return res.status(401).json({ 
-        error: "অননুমোদিত অ্যাক্সেস! সরাসরি API রিকোয়েস্ট পাঠানো নিষেধ। শুধুমাত্র লগইন করা আসল ব্যবহারকারীর ভ্যালিড কুকি (Valid Session Cookie) প্রয়োজন।" 
-      });
-    }
-
-    // 2. Real User Verification against Database
-    const sessionUser = auth.payload;
-    const dbUser = await findUser({ id: sessionUser.id });
-    if (!dbUser) {
-      return res.status(401).json({ 
-        error: "ব্যবহারকারী অ্যাকাউন্ট ডাটাবেসে পাওয়া যায়নি! অনুগ্রহ করে পুনরায় লগইন করুন।" 
-      });
-    }
-
-    const data = await parseBody(req);
-    const { amount, method, sender_number, trxId } = data;
-    const reqPhone = dbUser.phone || sessionUser.phone || '';
-    const reqUserName = dbUser.name || sessionUser.name || '';
-
-    if (data.isDemo || data.role === 'demo' || (reqPhone === '01700000000' && String(reqUserName || '').toLowerCase().includes('demo'))) {
-      return res.status(403).json({ error: 'ডেমো অ্যাকাউন্ট দিয়ে ওয়ালেটে টাকা যোগ বা রিকোয়েস্ট করা যাবে না!' });
-    }
-
-    if (!amount || !method || !trxId) {
-      return res.status(400).json({ error: 'টাকার পরিমাণ, মাধ্যম এবং Transaction ID আবশ্যক' });
-    }
-
-    const cleanTrx = trxId.trim().toUpperCase();
-    if (cleanTrx.length < 8 || !/^[A-Z0-9]{8,20}$/.test(cleanTrx)) {
-      return res.status(400).json({ error: 'সঠিক Transaction ID (TrxID) প্রদান করুন (কমপক্ষে ৮ অক্ষর/সংখ্যা)' });
-    }
-
-    const dummyTrx = ['12345678', '00000000', '11111111', 'AAAAAAAA', 'TESTTEST', 'TX123456', 'ASDFASDF', 'QWERTYUI'];
-    if (dummyTrx.includes(cleanTrx) || /^([A-Z0-9])\1{7,}$/.test(cleanTrx)) {
-      return res.status(400).json({ error: 'ভুয়া বা স্প্যাম Transaction ID গ্রহণযোগ্য নয়! বিকাশ/নগদের আসল TrxID দিন।' });
-    }
-
-    // Duplicate TrxID guard
-    const isDup = await isTrxIdDuplicate(cleanTrx);
-    if (isDup) {
-      return res.status(400).json({ 
-        error: `এই Transaction ID (${cleanTrx}) টি ইতিমধ্যে ব্যবহার করা হয়েছে! আপনার বিকাশ/নগদ অ্যাপের সঠিক TrxID দিন।` 
-      });
-    }
-
-    const depositAmount = parseFloat(amount);
-    if (depositAmount < 20) {
-      return res.status(400).json({ error: 'সর্বনিম্ন ২০ ৳ রিচার্জ করতে হবে' });
-    }
-
-    const newReq = {
-      id: 'REQ-' + Math.floor(100 + Math.random() * 900),
-      user_id: dbUser.id,
-      user_name: dbUser.name || sessionUser.name || 'Customer',
-      phone: dbUser.phone || sessionUser.phone || '01700000000',
-      amount: depositAmount,
-      method,
-      sender_number: sender_number || dbUser.phone || '',
-      trxId: cleanTrx,
-      status: 'Pending',
-      date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
-      created_at: new Date().toISOString()
-    };
-
-    await createWalletRequestDoc(newReq);
-    return res.status(201).json({ success: true, request: newReq });
-  }
-
-  // PUT: Admin approve or reject deposit request
-  if (req.method === 'PUT') {
-    const auth = verifyAdminRequest(req);
-    if (!auth.valid) {
-      return res.status(401).json({ error: 'Unauthorized: Admin authentication required to approve or reject deposit requests' });
-    }
-
-    const data = await parseBody(req);
-    const { requestId, action } = data; // action: 'approve' | 'reject'
-
-    if (!requestId || !action) {
-      return res.status(400).json({ error: 'requestId and action are required' });
-    }
-
-    const all = await findWalletRequests();
-    const reqItem = all.find(r => r.id === requestId);
-    if (!reqItem) return res.status(404).json({ error: 'Deposit request not found' });
-
-    if (action === 'approve') {
-      if (reqItem.status === 'Approved') {
-        return res.status(400).json({ error: 'এই রিকোয়েস্টটি ইতিমধ্যে অনুমোদন (Approved) করা হয়েছে!' });
-      }
-      await updateWalletRequestStatus(requestId, 'Approved');
-      // Find user and credit balance in DB
-      let user = await findUser({ phone: reqItem.phone });
-      if (!user && reqItem.sender_number) {
-        user = await findUser({ phone: reqItem.sender_number });
-      }
-      let newBalance = null;
-      if (user) {
-        newBalance = (user.balance || 0) + reqItem.amount;
-        await updateUser(user.id, {
-          balance: newBalance
-        });
-      }
-      return res.status(200).json({ 
-        success: true, 
-        message: `অনুমোদন সফল! গ্রাহকের (${reqItem.user_name}) একাউন্টে ${reqItem.amount} ৳ ব্যালেন্স যুক্ত হয়েছে।`,
-        newBalance,
-        phone: reqItem.phone
-      });
-    } else if (action === 'reject') {
-      await updateWalletRequestStatus(requestId, 'Rejected');
-      return res.status(200).json({ 
-        success: true, 
-        message: `রিকোয়েস্ট (${requestId}) বাতিল (Rejected) করা হয়েছে। কোনো ব্যালেন্স যুক্ত হয়নি।` 
-      });
-    }
-
-    return res.status(400).json({ error: 'Invalid action. Must be approve or reject.' });
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
 };

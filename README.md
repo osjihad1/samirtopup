@@ -17,8 +17,7 @@ The Admin Panel provides real-time control over the entire platform without touc
 
 ### 🔑 Admin Access Credentials:
 - **URL**: Open [`admin.html`](file:///admin.html) or click **🔐 Admin Panel** in the footer of [`index.html`](file:///index.html).
-- **Username**: `admin` (or `samir`)
-- **Password**: `admin123` (or `samir123`, or configured via `ADMIN_PASSWORD` in `.env`)
+- **Credentials**: set `ADMIN_USERNAME` / `ADMIN_PASSWORD` as environment variables (never commit them).
 - **Security**: Strictly server-side verified HMAC session token with brute-force rate-limiting and zero bypass capability.
 
 ### 🛠️ Admin Features & Options:
@@ -114,7 +113,7 @@ Samir Topup features a dual-engine database layer:
    ```
 6. In **Vercel Project Settings -> Environment Variables**, add:
    - `MONGODB_URI`: *Your MongoDB connection string*
-   - `AUTH_SECRET`: *A secure random string (e.g. `samir_topup_2026_secret`)*
+   - `AUTH_SECRET`: *A secure random string (e.g. `<random 48+ chars>`)*
 
 ---
 

@@ -9,7 +9,7 @@ const {
   getSettingsData, 
   parseBody, 
   setCors,
-  purgeDemoData
+  hitLimit
 } = require('./_db');
 const { 
   createAdminSessionToken, 
@@ -116,7 +116,6 @@ module.exports = async function handler(req, res) {
     }
 
     // 3. Purge all legacy demo users, demo orders, and demo requests permanently
-    await purgeDemoData();
 
     if (action === 'clean_demo') {
       return res.status(200).json({ 
@@ -170,7 +169,7 @@ module.exports = async function handler(req, res) {
     // 1. Admin Secure Login with Rate Limiting
     if (action === 'login') {
       const clientIp = getClientIp(req);
-      const rateCheck = checkLoginRateLimit(clientIp);
+      const rateCheck = (await hitLimit('admin:' + clientIp, 5, 15 * 60 * 1000)) ? { allowed: true } : { allowed: false, message: 'অতিরিক্ত চেষ্টা! অ্যাডমিন লগইন ১৫ মিনিটের জন্য লক।' };
 
       if (!rateCheck.allowed) {
         return res.status(429).json({ error: rateCheck.message });
@@ -215,7 +214,7 @@ module.exports = async function handler(req, res) {
       if (!user) return res.status(404).json({ error: 'ব্যবহারকারী খুঁজে পাওয়া যায়নি!' });
 
       const num = parseFloat(amount);
-      if (isNaN(num) || num <= 0) {
+      if (!Number.isFinite(num) || num <= 0 || num > 100000) {
         return res.status(400).json({ error: 'সঠিক টাকার পরিমাণ দিন!' });
       }
 

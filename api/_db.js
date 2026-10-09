@@ -5,7 +5,7 @@ const path = require('path');
 // Auto-load .env file if present
 try {
   const envPath = path.join(__dirname, '..', '.env');
-  if (fs.existsSync(envPath)) {
+  if (!process.env.VERCEL && fs.existsSync(envPath)) {
     const envLines = fs.readFileSync(envPath, 'utf8').split('\n');
     envLines.forEach(line => {
       const trimmed = line.trim();
@@ -21,8 +21,7 @@ try {
 
 const TMP_PATH = '/tmp/samirtopup_db.json';
 const SEED_PATH = path.join(__dirname, 'db.json');
-const DEFAULT_MONGO_URI = 'mongodb+srv://usaemailhossen_db_user:xpmBZFuqqVwBhbIo@cluster0.mongodb.net/samirtopup?retryWrites=true&w=majority';
-const MONGODB_URI = process.env.MONGODB_URI || DEFAULT_MONGO_URI;
+const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.MONGODB_DB || 'samirtopup';
 
 let memoryStore = null;
@@ -58,6 +57,7 @@ async function connectMongo() {
 
     cachedMongoClient = await global._mongoClientPromise;
     cachedDb = cachedMongoClient.db(DB_NAME);
+    ensureIndexes(cachedDb).catch(() => {});
     console.log(`✅ Connected to MongoDB Atlas: ${DB_NAME}`);
     return cachedDb;
   } catch (err) {
@@ -73,6 +73,7 @@ async function connectMongo() {
 // 2. File / In-Memory JSON Store Fallback
 // ==========================================
 function getDb() {
+  if (process.env.VERCEL) throw new Error('Database unavailable (refusing temporary storage in production)');
   if (memoryStore) return memoryStore;
 
   try {
@@ -245,7 +246,7 @@ async function findOrders(filter = {}) {
   if (db) {
     return await db.collection('orders').find(filter).sort({ _id: -1 }).toArray();
   }
-  return getDb().orders || [];
+  return (getDb().orders || []).filter(o => Object.entries(filter).every(([k, v]) => String(o[k]) === String(v)));
 }
 
 async function createOrderDoc(order) {
@@ -349,6 +350,7 @@ async function getSettingsData() {
 }
 
 async function saveSettingsData(settings) {
+  settings = { ...(await getSettingsData()), ...settings };
   const db = await connectMongo();
   if (db) {
     await db.collection('settings').updateOne(
@@ -447,6 +449,69 @@ async function purgeDemoData() {
   return true;
 }
 
+// --- ATOMIC HELPERS (race-condition safe) ---
+async function ensureIndexes(db) {
+  const u = db.collection('users');
+  await u.createIndex({ id: 1 }, { unique: true }).catch(() => {});
+  await u.createIndex({ phone: 1 }, { unique: true, partialFilterExpression: { phone: { $type: 'string', $gt: '' } } }).catch(() => {});
+  await u.createIndex({ email: 1 }, { unique: true, partialFilterExpression: { email: { $type: 'string', $gt: '' } } }).catch(() => {});
+  await db.collection('orders').createIndex({ id: 1 }, { unique: true }).catch(() => {});
+  await db.collection('wallet_requests').createIndex({ id: 1 }, { unique: true }).catch(() => {});
+}
+const docOf = r => (r && r.value !== undefined ? r.value : r) || null;
+const idFilter = id => ({ $or: [{ id: Number(id) }, { id: String(id) }] });
+
+// Deduct only if balance is sufficient. Returns new balance or null.
+async function deductBalance(id, amount) {
+  const db = await connectMongo();
+  if (db) {
+    const d = docOf(await db.collection('users').findOneAndUpdate({ ...idFilter(id), balance: { $gte: amount } }, { $inc: { balance: -amount, total_spend: amount } }, { returnDocument: 'after' }));
+    return d ? d.balance : null;
+  }
+  const l = getDb(); const u = l.users.find(x => x.id == id);
+  if (!u || (u.balance || 0) < amount) return null;
+  u.balance = (u.balance || 0) - amount; u.total_spend = (u.total_spend || 0) + amount; saveDb(l); return u.balance;
+}
+async function creditBalance(id, amount) {
+  const db = await connectMongo();
+  if (db) {
+    const d = docOf(await db.collection('users').findOneAndUpdate(idFilter(id), { $inc: { balance: amount } }, { returnDocument: 'after' }));
+    return d ? d.balance : null;
+  }
+  const l = getDb(); const u = l.users.find(x => x.id == id);
+  if (!u) return null; u.balance = (u.balance || 0) + amount; saveDb(l); return u.balance;
+}
+// Claim a TrxID exactly once. Returns false if already used.
+async function claimTrx(trx) {
+  if (await isTrxIdDuplicate(trx)) return false;
+  const db = await connectMongo();
+  if (!db) return true;
+  try { await db.collection('used_trx').insertOne({ _id: trx }); return true; } catch (e) { return false; }
+}
+// Move order to Cancelled once. Returns previous order or null if already cancelled/missing.
+async function cancelOrderOnce(orderId) {
+  const db = await connectMongo();
+  if (db) return docOf(await db.collection('orders').findOneAndUpdate({ id: orderId, status: { $ne: 'Cancelled' } }, { $set: { status: 'Cancelled', updated_at: new Date().toISOString() } }, { returnDocument: 'before' }));
+  const l = getDb(); const o = l.orders.find(x => x.id === orderId);
+  if (!o || o.status === 'Cancelled') return null; const prev = { ...o }; o.status = 'Cancelled'; saveDb(l); return prev;
+}
+// Pending -> Approved once. Returns the request or null.
+async function approveWalletOnce(reqId) {
+  const db = await connectMongo();
+  if (db) return docOf(await db.collection('wallet_requests').findOneAndUpdate({ id: reqId, status: 'Pending' }, { $set: { status: 'Approved', updated_at: new Date().toISOString() } }, { returnDocument: 'after' }));
+  const l = getDb(); const r = l.wallet_requests.find(x => x.id === reqId);
+  if (!r || r.status !== 'Pending') return null; r.status = 'Approved'; saveDb(l); return r;
+}
+// Shared rate limiter (MongoDB-backed so it works across serverless instances)
+async function hitLimit(key, max, windowMs) {
+  const db = await connectMongo(); const now = Date.now();
+  if (!db) { const m = (global._rl = global._rl || new Map()); let r = m.get(key); if (!r || r.t < now) r = { n: 0, t: now + windowMs }; r.n++; m.set(key, r); return r.n <= max; }
+  const c = db.collection('rate_limits');
+  await c.deleteOne({ _id: key, t: { $lt: now } });
+  const d = docOf(await c.findOneAndUpdate({ _id: key }, { $inc: { n: 1 }, $setOnInsert: { t: now + windowMs } }, { upsert: true, returnDocument: 'after' }));
+  return d.n <= max;
+}
+
 // --- UTILITIES ---
 function parseBody(req) {
   return new Promise((resolve) => {
@@ -503,5 +568,11 @@ module.exports = {
   getDb,
   saveDb,
   parseBody,
-  setCors
+  setCors,
+  deductBalance,
+  creditBalance,
+  claimTrx,
+  cancelOrderOnce,
+  approveWalletOnce,
+  hitLimit
 };

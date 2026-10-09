@@ -203,8 +203,7 @@ const API = {
   },
 
   setToken(token) {
-    if (token) localStorage.setItem("samirtopup_token", token);
-    else localStorage.removeItem("samirtopup_token");
+    localStorage.removeItem("samirtopup_token"); /* token lives in an HttpOnly cookie only */
   },
 
   getToken() {
@@ -297,7 +296,7 @@ const API = {
         // Sync to local backup
         let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
         users = users.filter(u => u.phone !== data.user.phone && u.email !== data.user.email);
-        users.push({ ...data.user, password });
+        users.push({ ...data.user });
         localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
         return { success: true, user: data.user, token: data.token };
       } else if (res.status === 401 && data.error && (data.error.includes("পাওয়া যায়নি") || data.error.includes("not found"))) {
@@ -533,7 +532,8 @@ const API = {
       console.warn("Backend orders unreachable, falling back to local storage");
     }
 
-    // 2. Offline Fallback
+    return { success: false, error: "সার্ভারের সাথে সংযোগ হয়নি। আবার চেষ্টা করুন — অর্ডার তৈরি হয়নি।" };
+    // (offline fallback removed: it created fake local orders)
     sessionStorage.setItem("samirtopup_last_order_ts", Date.now().toString());
     const orders = this.getOrders();
     const newOrder = {

@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/custom.css">
+  <link rel="stylesheet" href="css/custom.css">\n  <link rel="stylesheet" href="css/theme.css">
 
   <style>
     /* Dedicated Master Admin Dashboard */
@@ -1174,7 +1174,7 @@
         }
       } catch (ex) {
         // Standalone offline fallback
-        if ((u === "admin" && p === "admin123") || (u === "samir" && p === "samir123")) {
+        if (false) {
           sessionStorage.setItem("samirtopup_admin_logged", "true");
           sessionStorage.setItem("samirtopup_admin_token", "offline_admin_" + Date.now());
           document.getElementById("adminAuthGate").style.display = "none";
@@ -1188,6 +1188,8 @@
         btn.innerHTML = "<span>🔐 Login to Dashboard</span>";
       }
     }
+
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     async function logoutAdmin() {
       try {
@@ -1601,32 +1603,32 @@
       filtered.forEach(o => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td><strong>${o.id}</strong></td>
-          <td style="color: #94a3b8; font-size: 12.5px;">${o.date || 'N/A'}</td>
+          <td><strong>${esc(o.id)}</strong></td>
+          <td style="color: #94a3b8; font-size: 12.5px;">${esc(o.date || 'N/A')}</td>
           <td>
-            <div style="font-weight: 700;">${o.user_name || 'Customer'}</div>
-            <small style="color: #94a3b8;">${o.phone || ''}</small>
+            <div style="font-weight: 700;">${esc(o.user_name || 'Customer')}</div>
+            <small style="color: #94a3b8;">${esc(o.phone || '')}</small>
           </td>
           <td>
-            <div style="font-weight: 700; color: #38bdf8;">${o.product || 'FF Topup'}</div>
-            <small style="color: #cbd5e1;">${o.package || ''}</small>
+            <div style="font-weight: 700; color: #38bdf8;">${esc(o.product || 'FF Topup')}</div>
+            <small style="color: #cbd5e1;">${esc(o.package || '')}</small>
           </td>
           <td>
-            <span class="uid-tag" onclick="navigator.clipboard.writeText('${o.playerId}'); alert('Copied UID: ${o.playerId}')" title="Click to copy UID">
-              ${o.playerId || 'N/A'} 📋
+            <span class="uid-tag" onclick="navigator.clipboard.writeText('${esc(o.playerId)}'); alert('Copied UID: ${esc(o.playerId)}')" title="Click to copy UID">
+              ${esc(o.playerId || 'N/A')} 📋
             </span>
           </td>
           <td>
-            <span style="font-weight: 700;">${o.method || 'bKash'}</span><br>
-            <small style="color: #94a3b8; font-family: monospace;">${o.trxId || ''}</small>
+            <span style="font-weight: 700;">${esc(o.method || 'bKash')}</span><br>
+            <small style="color: #94a3b8; font-family: monospace;">${esc(o.trxId || '')}</small>
           </td>
-          <td><strong style="color: #ff6702; font-size: 15px;">${o.amount} ৳</strong></td>
-          <td><span class="status-badge ${o.status}">${o.status}</span></td>
+          <td><strong style="color: #ff6702; font-size: 15px;">${esc(o.amount)} ৳</strong></td>
+          <td><span class="status-badge ${esc(o.status)}">${esc(o.status)}</span></td>
           <td>
             <div class="action-btn-group">
-              ${o.status !== 'Completed' ? `<button onclick="updateOrderStatus('${o.id}', 'Completed')" class="btn-act btn-act-complete" title="Mark Completed">✅ Done</button>` : ''}
-              ${o.status === 'Pending' ? `<button onclick="updateOrderStatus('${o.id}', 'Processing')" class="btn-act btn-act-process" title="Mark Processing">⏳ Process</button>` : ''}
-              ${o.status !== 'Cancelled' ? `<button onclick="updateOrderStatus('${o.id}', 'Cancelled')" class="btn-act btn-act-cancel" title="Cancel & Refund">❌ Cancel</button>` : ''}
+              ${o.status !== 'Completed' ? `<button onclick="updateOrderStatus('${esc(o.id)}', 'Completed')" class="btn-act btn-act-complete" title="Mark Completed">✅ Done</button>` : ''}
+              ${o.status === 'Pending' ? `<button onclick="updateOrderStatus('${esc(o.id)}', 'Processing')" class="btn-act btn-act-process" title="Mark Processing">⏳ Process</button>` : ''}
+              ${o.status !== 'Cancelled' ? `<button onclick="updateOrderStatus('${esc(o.id)}', 'Cancelled')" class="btn-act btn-act-cancel" title="Cancel & Refund">❌ Cancel</button>` : ''}
             </div>
           </td>
         `;
@@ -1682,19 +1684,19 @@
       adminWalletReqs.forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td><strong>${r.id}</strong></td>
-          <td style="color: #94a3b8; font-size: 12.5px;">${r.date || 'N/A'}</td>
-          <td><strong>${r.user_name}</strong></td>
-          <td>${r.phone}</td>
-          <td><span style="font-weight: 700;">${r.method}</span></td>
-          <td><span style="font-family: monospace; color: #facc15;">${r.trxId}</span></td>
-          <td><strong style="color: #10b981; font-size: 15px;">+${r.amount} ৳</strong></td>
-          <td><span class="status-badge ${r.status}">${r.status}</span></td>
+          <td><strong>${esc(r.id)}</strong></td>
+          <td style="color: #94a3b8; font-size: 12.5px;">${esc(r.date || 'N/A')}</td>
+          <td><strong>${esc(r.user_name)}</strong></td>
+          <td>${esc(r.phone)}</td>
+          <td><span style="font-weight: 700;">${esc(r.method)}</span></td>
+          <td><span style="font-family: monospace; color: #facc15;">${esc(r.trxId)}</span></td>
+          <td><strong style="color: #10b981; font-size: 15px;">+${esc(r.amount)} ৳</strong></td>
+          <td><span class="status-badge ${esc(r.status)}">${esc(r.status)}</span></td>
           <td>
             ${r.status === 'Pending' ? `
               <div class="action-btn-group">
-                <button onclick="handleWalletAction('${r.id}', 'approve')" class="btn-act btn-act-complete">Approve</button>
-                <button onclick="handleWalletAction('${r.id}', 'reject')" class="btn-act btn-act-cancel">Reject</button>
+                <button onclick="handleWalletAction('${esc(r.id)}', 'approve')" class="btn-act btn-act-complete">Approve</button>
+                <button onclick="handleWalletAction('${esc(r.id)}', 'reject')" class="btn-act btn-act-cancel">Reject</button>
               </div>
             ` : `<small style="color: #94a3b8;">Closed</small>`}
           </td>
@@ -1766,16 +1768,16 @@
       adminUsers.forEach(u => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td><strong>#${u.id}</strong></td>
-          <td><strong>${u.name}</strong></td>
-          <td>${u.phone || u.email}</td>
+          <td><strong>#${esc(u.id)}</strong></td>
+          <td><strong>${esc(u.name)}</strong></td>
+          <td>${esc(u.phone || u.email)}</td>
           <td><strong style="color: #10b981; font-size: 15px;">${u.balance || 0} ৳</strong></td>
           <td>${u.total_spend || 0} ৳</td>
-          <td><span class="status-badge Processing">${u.role || 'user'}</span></td>
+          <td><span class="status-badge Processing">${esc(u.role || 'user')}</span></td>
           <td>
             <div style="display: flex; gap: 6px;">
-              <button onclick="adjustUserBal('${u.id}', 100)" class="btn-act btn-act-complete">+100 ৳</button>
-              <button onclick="adjustUserBal('${u.id}', -50)" class="btn-act btn-act-cancel">-50 ৳</button>
+              <button onclick="adjustUserBal('${esc(u.id)}', 100)" class="btn-act btn-act-complete">+100 ৳</button>
+              <button onclick="adjustUserBal('${esc(u.id)}', -50)" class="btn-act btn-act-cancel">-50 ৳</button>
             </div>
           </td>
         `;

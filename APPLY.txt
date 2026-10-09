@@ -1,0 +1,7 @@
+1. Copy everything in this folder over your project (same paths). Your images/ are untouched.
+2. DELETE .env from the repo:   git rm --cached .env   (and remove it from history with git filter-repo)
+3. In Vercel -> Settings -> Environment Variables set: MONGODB_URI, MONGODB_DB, AUTH_SECRET (48+ random chars),
+   ADMIN_SECRET (48+ random chars), ADMIN_USERNAME, ADMIN_PASSWORD (16+ chars). Optional: ALLOWED_ORIGINS.
+4. Rotate the MongoDB Atlas password FIRST (the old one was public).
+5. Test locally:  node tests/security.test.js
+6. api/_catalog.json is generated from js/data.js. If you change prices, regenerate it (ask me for the one-line script).

@@ -6,7 +6,7 @@ const path = require('path');
 // Auto-load .env file if present
 try {
   const envPath = path.join(__dirname, '..', '.env');
-  if (fs.existsSync(envPath)) {
+  if (!process.env.VERCEL && fs.existsSync(envPath)) {
     const envLines = fs.readFileSync(envPath, 'utf8').split('\n');
     envLines.forEach(line => {
       const trimmed = line.trim();
@@ -20,7 +20,9 @@ try {
   }
 } catch (e) {}
 
-const AUTH_SECRET = process.env.AUTH_SECRET || 'samir_topup_secret_key_2026_super_secure';
+const devSecret = () => (process.env.VERCEL ? null : crypto.randomBytes(32).toString('hex'));
+const AUTH_SECRET = process.env.AUTH_SECRET || devSecret();
+if (!AUTH_SECRET || AUTH_SECRET.length < 32) throw new Error('AUTH_SECRET env var (32+ chars) is required');
 
 // 1. Password Hashing (scrypt + salt)
 function hashPassword(password) {
@@ -62,7 +64,7 @@ function verifySessionToken(token) {
   const [data, signature] = parts;
   const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('base64url');
 
-  if (signature !== expectedSig) {
+  if (signature.length !== expectedSig.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
     return { valid: false, error: 'Invalid token signature' };
   }
 
@@ -111,7 +113,8 @@ function generateCaptcha() {
 
   // Create HMAC-signed captcha token with 5-minute expiry
   const exp = Date.now() + 5 * 60 * 1000;
-  const payload = { answer: answer.trim().toUpperCase(), exp };
+  const nonce = crypto.randomBytes(8).toString('hex');
+  const payload = { n: nonce, h: crypto.createHmac('sha256', AUTH_SECRET).update(nonce + ':' + answer.trim().toUpperCase()).digest('hex'), exp };
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('base64url');
   const token = `${data}.${signature}`;
@@ -136,14 +139,16 @@ function verifyCaptcha(userAnswer, token) {
   try {
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
     if (Date.now() > payload.exp) return false; // Expired
-    return String(userAnswer).trim().toUpperCase() === String(payload.answer).trim().toUpperCase();
+    const h = crypto.createHmac('sha256', AUTH_SECRET).update(payload.n + ':' + String(userAnswer).trim().toUpperCase()).digest('hex');
+    return typeof payload.h === 'string' && payload.h.length === h.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(payload.h));
   } catch (e) {
     return false;
   }
 }
 
 // 4. Hardened Admin Authentication & Session Management
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'samir_super_admin_pass_2026';
+const ADMIN_SECRET = process.env.ADMIN_SECRET || devSecret();
+if (!ADMIN_SECRET || ADMIN_SECRET.length < 32) throw new Error('ADMIN_SECRET env var (32+ chars) is required');
 
 function createAdminSessionToken(adminData = { id: 1, role: 'super_admin', name: 'Samir Topup Master' }, expiresInMs = 12 * 60 * 60 * 1000) {
   const payload = {
@@ -299,7 +304,7 @@ function extractTokenFromRequest(req) {
   }
   try {
     const url = new URL(req.url, `http://${headers.host || 'localhost'}`);
-    return url.searchParams.get('adminToken') || url.searchParams.get('token') || '';
+    return '';
   } catch (e) {
     return '';
   }
