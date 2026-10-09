@@ -258,113 +258,48 @@ const API = {
     return true;
   },
 
-  async login(emailOrPhone, password, captchaAnswer = "", captchaToken = "") {
-    // 0. CAPTCHA MUST BE VERIFIED FIRST (Blocking all wrong answers)
-    if (!captchaAnswer || !captchaToken) {
+  async login(emailOrPhone, password, captchaAnswer = "", captchaToken = "", turnstileToken = "") {
+    // 0. Captcha Verification check
+    if (!turnstileToken && (!captchaAnswer || !captchaToken)) {
       return { success: false, message: "⚠️ অনুগ্রহ করে ক্যাপচা পূরণ করুন!" };
     }
-    if (!this.verifyCaptcha(captchaAnswer, captchaToken)) {
+    if (captchaAnswer && captchaToken && !this.verifyCaptcha(captchaAnswer, captchaToken)) {
       return { success: false, message: "⚠️ ভুল ক্যাপচা উত্তর! অনুগ্রহ করে সঠিক উত্তর লিখুন।" };
     }
 
-    const cleanId = (emailOrPhone || "").trim();
-
-    // 1. Try Serverless / MongoDB API
+    // 1. Strict Serverless / MongoDB API Login (Zero fake client fallback)
     try {
       const res = await fetch("/api/auth?action=login", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: emailOrPhone, password, captchaAnswer, captchaToken })
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+        body: JSON.stringify({
+          identifier: emailOrPhone,
+          password,
+          captchaAnswer,
+          captchaToken,
+          turnstileToken
+        })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         this.setUser(data.user);
         if (data.token) this.setToken(data.token);
-        // Sync to local backup
-        let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-        users = users.filter(u => u.phone !== data.user.phone && u.email !== data.user.email);
-        users.push({ ...data.user, password });
-        localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
         return { success: true, user: data.user, token: data.token };
-      } else if (res.status === 401 && data.error && (data.error.includes("পাওয়া যায়নি") || data.error.includes("not found"))) {
-        // Account might exist locally in localStorage from previous offline/dev session: check and auto-sync to server
-        let localUsers = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-        const cleanDigits = cleanId.replace(/\D/g, '').replace(/^88/, '');
-        const match = localUsers.find(u => {
-          const uDigits = (u.phone || '').replace(/\D/g, '').replace(/^88/, '');
-          const uEmail = (u.email || '').toLowerCase();
-          const phoneMatch = cleanDigits && uDigits === cleanDigits;
-          const emailMatch = cleanId.includes('@') && uEmail === cleanId.toLowerCase();
-          return (phoneMatch || emailMatch || u.phone === cleanId || u.email === cleanId) && u.password === password;
-        });
-
-        if (match) {
-          // Auto-migrate account to serverless database
-          try {
-            const regRes = await fetch("/api/auth?action=register", {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: match.name,
-                phone: match.phone,
-                email: match.email,
-                password: match.password,
-                captchaAnswer,
-                captchaToken
-              })
-            });
-            const regData = await regRes.json();
-            if (regRes.ok && regData.success) {
-              this.setUser(regData.user);
-              if (regData.token) this.setToken(regData.token);
-              return { success: true, user: regData.user, token: regData.token };
-            }
-          } catch (e) {}
-
-          match.balance = Number(match.balance) || 0;
-          this.setUser(match);
-          return { success: true, user: match };
-        }
-
-        return { success: false, message: data.error };
-      } else if (res.status === 400 || res.status === 401) {
-        return { success: false, message: data.error || data.message || "ভুল তথ্য বা পাসওয়ার্ড!" };
+      } else {
+        return { success: false, message: data.error || data.message || "মোবাইল/ইমেইল অথবা পাসওয়ার্ড সঠিক নয়!" };
       }
     } catch(e) {
-      console.warn("Server auth unreachable, using local fallback");
+      return { success: false, message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে ইন্টারনেট সংযোগ চেক করুন।" };
     }
-
-    // 2. Offline / LocalStorage Fallback
-    let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-    const cleanDigits = cleanId.replace(/\D/g, '').replace(/^88/, '');
-    let match = users.find(u => {
-      const uDigits = (u.phone || '').replace(/\D/g, '').replace(/^88/, '');
-      const uEmail = (u.email || '').toLowerCase();
-      const phoneMatch = cleanDigits && uDigits === cleanDigits;
-      const emailMatch = cleanId.includes('@') && uEmail === cleanId.toLowerCase();
-      return (phoneMatch || emailMatch || u.phone === cleanId || u.email === cleanId) && u.password === password;
-    });
-    
-    if (!match) {
-      return { 
-        success: false, 
-        message: "অ্যাকাউন্ট খুঁজে পাওয়া যায়নি বা পাসওয়ার্ড ভুল! সঠিক তথ্য দিন অথবা নতুন অ্যাকাউন্ট তৈরি করুন।" 
-      };
-    }
-
-    match.balance = Number(match.balance) || 0;
-    this.setUser(match);
-    return { success: true, user: match };
   },
 
   async register(userData) {
-    // 0. CAPTCHA MUST BE VERIFIED FIRST
-    if (!userData.captchaAnswer || !userData.captchaToken) {
+    // 0. Captcha Check
+    if (!userData.turnstileToken && (!userData.captchaAnswer || !userData.captchaToken)) {
       return { success: false, message: "⚠️ অনুগ্রহ করে ক্যাপচা পূরণ করুন!" };
     }
-    if (!this.verifyCaptcha(userData.captchaAnswer, userData.captchaToken)) {
+    if (userData.captchaAnswer && userData.captchaToken && !this.verifyCaptcha(userData.captchaAnswer, userData.captchaToken)) {
       return { success: false, message: "⚠️ ভুল ক্যাপচা উত্তর! অনুগ্রহ করে সঠিক উত্তর লিখুন।" };
     }
 
@@ -373,7 +308,6 @@ const API = {
     if (!/^(?:\+?88)?01[3-9]\d{8}$/.test(cleanPhone)) {
       return { success: false, message: "সঠিক বাংলাদেশি মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)" };
     }
-    // Block repeating fake dummy phone numbers
     if (/^01[3-9](\d)\1{7}$/.test(cleanPhone)) {
       return { success: false, message: "নকল বা ডামি মোবাইল নম্বর গ্রহণযোগ্য নয়!" };
     }
@@ -394,56 +328,40 @@ const API = {
       return { success: false, message: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।" };
     }
 
-    // 1. Try Serverless / MongoDB API
+    // 1. Strict Serverless / MongoDB API Registration
     try {
       const res = await fetch("/api/auth?action=register", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
         body: JSON.stringify({ ...userData, phone: cleanPhone, name: cleanName, email })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         this.setUser(data.user);
         if (data.token) this.setToken(data.token);
-        let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-        users = users.filter(u => u.phone !== cleanPhone && u.email !== email);
-        users.push({ ...data.user, password: userData.password });
-        localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
         return { success: true, user: data.user, message: data.message };
-      } else if (data.error) {
-        return { success: false, message: data.error };
+      } else {
+        return { success: false, message: data.error || data.message || "রেজিস্ট্রেশন ব্যর্থ হয়েছে!" };
       }
     } catch(e) {
-      console.warn("Server auth unreachable, using local fallback");
+      return { success: false, message: "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।" };
     }
-
-    // 2. Offline / LocalStorage Fallback
-    let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-    if (users.some(u => (u.email && u.email === email) || u.phone === cleanPhone)) {
-      return { success: false, message: "এই মোবাইল নম্বর বা ইমেইল দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট রয়েছে!" };
-    }
-    const newUser = {
-      id: Math.floor(100000 + Math.random() * 900000),
-      name: cleanName,
-      email: email,
-      phone: cleanPhone,
-      password: userData.password,
-      balance: 0, // Balance 0 to stop fake bonus farming
-      total_spend: 0,
-      rank: "Bronze"
-    };
-    users.push(newUser);
-    localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
-    this.setUser(newUser);
-    return { success: true, user: newUser, message: "রেজিস্ট্রেশন সফল হয়েছে! অ্যাকাউন্ট তৈরি সম্পন্ন।" };
   },
 
   async logout() {
     try {
-      await fetch("/api/auth?action=logout", { credentials: "include" });
+      await fetch("/api/auth?action=logout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Cache-Control": "no-cache" }
+      });
     } catch(e) {}
     this.setUser(null);
+    this.setToken(null);
+    localStorage.removeItem("samirtopup_user");
+    localStorage.removeItem("SamirTopup_user");
+    localStorage.removeItem("samirtopup_token");
     window.location.reload();
   },
 
@@ -623,48 +541,36 @@ const API = {
     };
   },
 
-  // Sync latest user balance from MongoDB / Server
+  // Sync latest user balance and session from MongoDB / Server
   async syncUserBalance() {
-    const user = this.getUser();
-    if (!user) return null;
-
     try {
       const token = this.getToken();
-      let url = "/api/auth?action=verify";
-      const headers = {};
-      if (token) {
-        headers["Authorization"] = "Bearer " + token;
-      } else if (user.phone) {
-        url = `/api/auth?phone=${encodeURIComponent(user.phone)}`;
-      } else if (user.id) {
-        url = `/api/auth?id=${encodeURIComponent(user.id)}`;
-      }
+      const headers = { "Cache-Control": "no-cache" };
+      if (token) headers["Authorization"] = "Bearer " + token;
 
-      const res = await fetch(url, { headers, credentials: "include" });
+      const res = await fetch("/api/auth?action=verify&_t=" + Date.now(), {
+        headers,
+        credentials: "include"
+      });
+
       if (res.ok) {
         const data = await res.json();
-        const updated = data.user || data;
-        if (updated && typeof updated.balance !== 'undefined') {
-          user.balance = Number(updated.balance);
-          if (updated.total_spend) user.total_spend = Number(updated.total_spend);
-          this.setUser(user);
-          this.updateBalanceUI(user.balance);
-          return user.balance;
+        if (data && data.valid && data.user) {
+          this.setUser(data.user);
+          this.updateBalanceUI(data.user.balance);
+          return data.user.balance;
         }
+      } else if (res.status === 401 || res.status === 403) {
+        // Server rejected session: clear invalid local user session immediately
+        this.setUser(null);
+        this.setToken(null);
+        this.updateBalanceUI(0);
+        return null;
       }
-    } catch (e) {
-      // In offline demo mode, check if samirtopup_accounts was updated by admin
-      const accounts = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
-      const match = accounts.find(a => (user.phone && a.phone === user.phone) || (user.id && a.id == user.id));
-      if (match && typeof match.balance !== 'undefined' && match.balance !== user.balance) {
-        user.balance = Number(match.balance);
-        this.setUser(user);
-        this.updateBalanceUI(user.balance);
-        return user.balance;
-      }
-    }
+    } catch (e) {}
 
-    return user.balance || 0;
+    const currentUser = this.getUser();
+    return currentUser ? (currentUser.balance || 0) : 0;
   },
 
   updateBalanceUI(balance) {

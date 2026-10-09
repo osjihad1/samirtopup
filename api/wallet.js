@@ -9,7 +9,8 @@ const {
   updateUser, 
   parseBody, 
   setCors,
-  createAuditLog
+  createAuditLog,
+  isMaintenanceMode
 } = require('./_db');
 const { verifyUserRequest, verifyAdminRequest, verifyTurnstileToken, verifyCaptcha } = require('./_crypto');
 const { sendTelegramAlert } = require('./_telegram');
@@ -49,6 +50,12 @@ module.exports = async function handler(req, res) {
 
   // POST: Submit add-money deposit request (Zero Direct API Access without Valid User Cookie)
   if (req.method === 'POST') {
+    if (await isMaintenanceMode()) {
+      return res.status(503).json({
+        error: 'সাইটটিতে বর্তমানে রক্ষণাবেক্ষণ (Maintenance Mode) চলছে। সাময়িকভাবে ওয়ালেট ডিপোজিট গ্রহণ বন্ধ রয়েছে।'
+      });
+    }
+
     // 1. Mandatory Cookie Check
     const auth = verifyUserRequest(req);
     if (!auth.valid) {

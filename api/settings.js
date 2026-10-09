@@ -18,6 +18,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     const settings = await getSettingsData();
     const banners = await getBannersData();
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.status(200).json({
       settings: settings || {},
       banners: banners || []
@@ -28,7 +29,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     const auth = verifyAdminRequest(req);
     if (!auth.valid) {
-      return res.status(401).json({ error: 'Unauthorized: Admin authentication required to update settings' });
+      return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন সেশন প্রয়োজন।' });
     }
 
     const data = await parseBody(req);
@@ -38,12 +39,15 @@ module.exports = async function handler(req, res) {
     let updatedBanners = null;
 
     if (settings) {
-      updatedSettings = await saveSettingsData(settings);
+      const existing = await getSettingsData();
+      const merged = { ...existing, ...settings };
+      updatedSettings = await saveSettingsData(merged);
     }
     if (banners) {
       updatedBanners = await saveBannersData(banners);
     }
 
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.status(200).json({
       success: true,
       settings: updatedSettings,

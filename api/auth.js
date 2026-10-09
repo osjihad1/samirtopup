@@ -1,6 +1,6 @@
 // Vercel Serverless Function: /api/auth
 // Features: Server-side Field Validation, Bot-Proof Captcha, Scrypt Password Hashing, HttpOnly Cookie Sessions & MongoDB
-const { findUser, createUser, parseBody, setCors, hitLimit } = require('./_db');
+const { findUser, createUser, updateUser, parseBody, setCors, hitLimit, isMaintenanceMode } = require('./_db');
 const clientIp = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'ip';
 const { 
   hashPassword, 
@@ -39,6 +39,7 @@ module.exports = async function handler(req, res) {
   // ==========================================
   if (action === 'logout') {
     clearUserCookie(res);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     return res.status(200).json({ success: true, message: 'লগআউট সফল হয়েছে।' });
   }
 
@@ -47,6 +48,7 @@ module.exports = async function handler(req, res) {
   // ==========================================
   if (req.method === 'GET') {
     if (action === 'verify') {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       const auth = verifyUserRequest(req);
       if (!auth.valid) {
         return res.status(401).json({ valid: false, error: auth.error });
@@ -85,6 +87,10 @@ module.exports = async function handler(req, res) {
   // 2. User Registration: POST /api/auth?action=register
   // ==========================================
   if (req.method === 'POST' && action === 'register') {
+    if (await isMaintenanceMode()) {
+      return res.status(503).json({ error: 'সাইটটিতে বর্তমানে রক্ষণাবেক্ষণ (Maintenance Mode) চলছে। সাময়িকভাবে নতুন রেজিস্ট্রেশন বন্ধ রয়েছে।' });
+    }
+
     const data = await parseBody(req);
     const { name, phone, email, password, captchaAnswer, captchaToken, turnstileToken } = data;
     if (!(await hitLimit('reg:' + clientIp(req), 10, 60 * 60 * 1000))) return res.status(429).json({ error: 'অনেকবার চেষ্টা করা হয়েছে। পরে আবার চেষ্টা করুন।' });
@@ -217,6 +223,10 @@ module.exports = async function handler(req, res) {
     let isPasswordCorrect = false;
     if (user.salt && user.hash) {
       isPasswordCorrect = verifyPassword(password, user.salt, user.hash);
+    } else if (user.password && user.password === password) {
+      isPasswordCorrect = true;
+      const { salt, hash } = hashPassword(password);
+      await updateUser(user.id, { salt, hash, password: null });
     }
 
     if (!isPasswordCorrect) {
@@ -226,6 +236,7 @@ module.exports = async function handler(req, res) {
     // Generate Session Token & HttpOnly Cookie
     const token = createSessionToken(user);
     setSessionCookie(res, token);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const { password: _, salt: __, hash: ___, ...userSafe } = user;
 
     return res.status(200).json({

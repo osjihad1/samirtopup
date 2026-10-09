@@ -11,7 +11,8 @@ const {
   setCors,
   createAuditLog,
   findCoupon,
-  incrementCouponUse
+  incrementCouponUse,
+  isMaintenanceMode
 } = require('./_db');
 const { verifyUserRequest, verifyAdminRequest } = require('./_crypto');
 const { sendTelegramAlert } = require('./_telegram');
@@ -86,6 +87,12 @@ module.exports = async function handler(req, res) {
   // POST: Create New Order (Per-Request User Cookie & DB Check)
   // ==========================================
   if (req.method === 'POST') {
+    if (await isMaintenanceMode()) {
+      return res.status(503).json({
+        error: 'সাইটটিতে বর্তমানে রক্ষণাবেক্ষণ (Maintenance Mode) চলছে। সাময়িকভাবে নতুন অর্ডার গ্রহণ বন্ধ রয়েছে।'
+      });
+    }
+
     // 1. Mandatory Cookie Check: Zero Direct API Access without Valid User Cookie
     const auth = verifyUserRequest(req);
     if (!auth.valid) {

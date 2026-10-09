@@ -24,13 +24,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   initEventAnnouncementModal();
 });
 
-// 0. Maintenance Mode Handler
-function checkMaintenanceMode() {
+// 0. Maintenance Mode Handler (Live Server Check with MongoDB)
+async function checkMaintenanceMode() {
   if (window.location.pathname.endsWith("admin.html")) return;
-  const settings = API.getSettings();
-  if (settings && settings.maintenance_mode) {
-    showMaintenanceScreen(settings);
+
+  // 1. Instant check from local cache
+  const localSettings = (typeof API !== 'undefined' && API.getSettings) ? API.getSettings() : {};
+  if (localSettings && (localSettings.maintenance_mode === true || localSettings.maintenance_mode === 'true')) {
+    showMaintenanceScreen(localSettings);
   }
+
+  // 2. Authoritative live check from MongoDB /api/settings
+  try {
+    const res = await fetch("/api/settings?_t=" + Date.now(), {
+      headers: { "Cache-Control": "no-cache" }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const s = data.settings || {};
+      const isMaint = (s.maintenance_mode === true || s.maintenance_mode === 'true');
+      if (isMaint) {
+        showMaintenanceScreen(s);
+      } else {
+        const overlay = document.getElementById("maintenanceOverlay");
+        if (overlay) {
+          overlay.remove();
+          document.body.style.overflow = "";
+        }
+      }
+    }
+  } catch (e) {}
 }
 
 function showMaintenanceScreen(settings) {

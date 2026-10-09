@@ -363,6 +363,16 @@ async function saveSettingsData(settings) {
   return local.settings;
 }
 
+async function isMaintenanceMode() {
+  try {
+    const settings = await getSettingsData();
+    if (!settings) return false;
+    return settings.maintenance_mode === true || settings.maintenance_mode === 'true' || settings.maintenance_mode === 1 || settings.maintenance_mode === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
 async function getBannersData() {
   const db = await connectMongo();
   if (db) {
@@ -649,6 +659,7 @@ module.exports = {
   updateWalletRequestStatus,
   getSettingsData,
   saveSettingsData,
+  isMaintenanceMode,
   getBannersData,
   saveBannersData,
   purgeDemoData,

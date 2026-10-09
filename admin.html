@@ -1101,23 +1101,25 @@
     // Check Admin Auth with Server-Side Verification (HttpOnly Cookie)
     async function checkAuth() {
       const gate = document.getElementById("adminAuthGate");
+      gate.style.display = "flex";
 
       try {
-        const res = await fetch("/api/admin?action=verify", {
-          credentials: "include"
+        const res = await fetch("/api/admin?action=verify&_t=" + Date.now(), {
+          credentials: "include",
+          headers: { "Cache-Control": "no-cache" }
         });
         const data = await res.json();
         if (res.ok && data.valid) {
           gate.style.display = "none";
           await loadDashboardData();
-        } else {
-          gate.style.display = "flex";
+          return;
         }
       } catch (e) {
-        // Fallback for standalone offline dev
-        gate.style.display = "none";
-        loadDashboardData();
+        console.warn("Admin verification check failed:", e);
       }
+
+      // Gate strictly remains visible on unauthorized
+      gate.style.display = "flex";
     }
 
     async function handleAdminLogin(e) {
@@ -1141,7 +1143,7 @@
         const res = await fetch("/api/admin?action=login", {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
           body: JSON.stringify({ username: u, password: p })
         });
         const data = await res.json();
@@ -1149,6 +1151,7 @@
         if (res.ok && data.success) {
           if (data.admin) sessionStorage.setItem("samirtopup_admin_profile", JSON.stringify(data.admin));
           document.getElementById("adminAuthGate").style.display = "none";
+          document.getElementById("adminPassword").value = "";
           await loadDashboardData();
         } else if (res.status === 429) {
           err.textContent = data.error || "অতিরিক্ত ভুল চেষ্টার কারণে অ্যাডমিন সাময়িকভাবে লক করা হয়েছে!";
@@ -1158,14 +1161,8 @@
           err.style.display = "block";
         }
       } catch (ex) {
-        // Standalone offline fallback
-        if ((u === "admin" && p === "admin123") || (u === "samir" && p === "samir123")) {
-          document.getElementById("adminAuthGate").style.display = "none";
-          loadDashboardData();
-        } else {
-          err.textContent = "ভুল ইউজারনেম বা পাসওয়ার্ড!";
-          err.style.display = "block";
-        }
+        err.textContent = "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। ইন্টারনেট সংযোগ চেক করুন।";
+        err.style.display = "block";
       } finally {
         btn.disabled = false;
         btn.innerHTML = "<span>🔐 Login to Dashboard</span>";
@@ -1174,9 +1171,18 @@
 
     async function logoutAdmin() {
       try {
-        await fetch("/api/admin?action=logout", { credentials: "include" });
+        await fetch("/api/admin?action=logout", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Cache-Control": "no-cache" }
+        });
       } catch (e) {}
       sessionStorage.removeItem("samirtopup_admin_profile");
+      const gate = document.getElementById("adminAuthGate");
+      if (gate) gate.style.display = "flex";
+      adminOrders = [];
+      adminWalletReqs = [];
+      adminUsers = [];
       window.location.reload();
     }
 
@@ -1286,19 +1292,61 @@
       }
     }
 
-    function toggleMaintenanceMode(isMaintenance) {
-      siteSettings.maintenance_mode = isMaintenance;
-      API.saveSettings(siteSettings);
-      updateMaintenancePill();
-      alert(isMaintenance ? "🔴 Site is now in MAINTENANCE MODE! Regular visitors will see maintenance screen." : "🟢 Site is now ONLINE! Store is fully open.");
+    async function toggleMaintenanceMode(isMaintenance) {
+      const checkbox = document.getElementById("maintenanceToggleCheckbox");
+      if (checkbox) checkbox.disabled = true;
+
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+          body: JSON.stringify({ settings: { maintenance_mode: isMaintenance } })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          siteSettings.maintenance_mode = isMaintenance;
+          localStorage.setItem("samirtopup_settings", JSON.stringify(siteSettings));
+          updateMaintenancePill();
+          alert(isMaintenance ? "🔴 Site is now in MAINTENANCE MODE! Regular visitors will see maintenance screen." : "🟢 Site is now ONLINE! Store is fully open.");
+        } else {
+          alert("❌ সার্ভারে মেইনটেন্যান্স স্ট্যাটাস সেভ করতে ব্যর্থ হয়েছে: " + (data.error || "Permission error"));
+          siteSettings.maintenance_mode = !isMaintenance;
+          updateMaintenancePill();
+        }
+      } catch (e) {
+        alert("❌ নেটওয়ার্ক ত্রুটি! সার্ভারের সাথে সংযোগ বিচ্ছিন্ন।");
+        siteSettings.maintenance_mode = !isMaintenance;
+        updateMaintenancePill();
+      } finally {
+        if (checkbox) checkbox.disabled = false;
+      }
     }
 
-    function saveMaintenanceSettings(e) {
+    async function saveMaintenanceSettings(e) {
       e.preventDefault();
-      siteSettings.maintenance_message = document.getElementById("inputMaintenanceMsg").value;
-      siteSettings.maintenance_eta = document.getElementById("inputMaintenanceEta").value;
-      API.saveSettings(siteSettings);
-      alert("✅ Maintenance message and ETA updated successfully!");
+      const msg = document.getElementById("inputMaintenanceMsg").value.trim();
+      const eta = document.getElementById("inputMaintenanceEta").value.trim();
+
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+          body: JSON.stringify({ settings: { maintenance_message: msg, maintenance_eta: eta } })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          siteSettings.maintenance_message = msg;
+          siteSettings.maintenance_eta = eta;
+          localStorage.setItem("samirtopup_settings", JSON.stringify(siteSettings));
+          alert("✅ Maintenance message and ETA updated successfully on server!");
+        } else {
+          alert("❌ সেভ ব্যর্থ হয়েছে: " + (data.error || "Error"));
+        }
+      } catch (err) {
+        alert("❌ নেটওয়ার্ক ত্রুটি!");
+      }
     }
 
     // Populate all form fields

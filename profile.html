@@ -357,18 +357,17 @@
     let activeWalletMethod = "bKash";
 
     document.addEventListener("DOMContentLoaded", async () => {
+      // 1. Authoritative Server Session Verification & Balance Sync
+      try {
+        await API.syncUserBalance();
+      } catch (err) {
+        console.warn("Could not sync balance:", err);
+      }
+
       let user = API.getUser();
       if (!user) {
         window.location.href = "login.html";
         return;
-      }
-
-      // Sync latest balance from MongoDB/Server (updates if admin approved)
-      try {
-        await API.syncUserBalance();
-        user = API.getUser() || user;
-      } catch (err) {
-        console.warn("Could not sync balance:", err);
       }
 
       document.getElementById("profileName").textContent = user.name || "Gamer";

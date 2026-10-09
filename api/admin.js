@@ -87,6 +87,7 @@ module.exports = async function handler(req, res) {
   // Admin Logout: GET / POST ?action=logout
   if (action === 'logout') {
     clearAdminCookie(res);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     return res.status(200).json({ success: true, message: 'অ্যাডমিন লগআউট সফল হয়েছে।' });
   }
 
@@ -96,6 +97,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     // 1. Session verification check
     if (action === 'verify') {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       const auth = verifyAdminRequest(req);
       if (!auth.valid) {
         return res.status(401).json({ valid: false, error: auth.error || 'Invalid admin session' });
@@ -197,6 +199,7 @@ module.exports = async function handler(req, res) {
         };
         const token = createAdminSessionToken(adminPayload);
         setAdminCookie(res, token);
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         return res.status(200).json({
           success: true,
           admin: { name: 'Samir Topup Master', role: 'Super Admin' }

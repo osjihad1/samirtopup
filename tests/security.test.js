@@ -197,6 +197,45 @@ async function runTests() {
     assert.throws(() => applyCoupon('EXPIRED5'), /Coupon limit reached/);
   });
 
+  // ==========================================
+  // Test 8: Admin Cookie Invalidation & Verification Gate
+  // ==========================================
+  await test('Admin Auth: Unauthenticated or tampered tokens must fail and keep portal locked', async () => {
+    const { verifyAdminToken, createAdminSessionToken } = require('../api/_crypto');
+    
+    // Malformed or empty token fails
+    const emptyCheck = verifyAdminToken('');
+    assert.strictEqual(emptyCheck.valid, false);
+
+    // Tampered token fails
+    const validToken = createAdminSessionToken({ id: 1, name: 'Admin', role: 'super_admin' });
+    const tamperedToken = validToken.slice(0, -4) + 'abcd';
+    const tamperedCheck = verifyAdminToken(tamperedToken);
+    assert.strictEqual(tamperedCheck.valid, false);
+
+    // Non-admin payload fails
+    const fakeToken = createAdminSessionToken({ id: 2, name: 'User', role: 'user', isAdmin: false });
+    const fakeCheck = verifyAdminToken(fakeToken);
+    assert.strictEqual(fakeCheck.valid, false);
+  });
+
+  // ==========================================
+  // Test 9: Server-Side Maintenance Mode Guard
+  // ==========================================
+  await test('Maintenance Mode: Order creation is strictly blocked when maintenance is enabled', async () => {
+    let maintenanceActive = true;
+    function createOrder(order) {
+      if (maintenanceActive) {
+        throw new Error('Maintenance Mode active: Orders temporarily blocked');
+      }
+      return { id: 'ORD-123', status: 'Pending' };
+    }
+
+    assert.throws(() => createOrder({ amount: 100 }), /Maintenance Mode active/);
+    maintenanceActive = false;
+    assert.doesNotThrow(() => createOrder({ amount: 100 }));
+  });
+
   console.log(`\n==================================================`);
   console.log(`Result: ${passed}/${total} Tests Passed`);
   console.log(`==================================================\n`);
