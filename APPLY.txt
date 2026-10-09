@@ -17,6 +17,7 @@ OVERVIEW OF CHANGES INCLUDED IN THIS PATCH:
 10. Enhanced UI & Mobile UX: Added copy buttons for payment numbers, dark contrast accents, and skeleton loading states.
 11. Security Test Suite: Provided `tests/security.test.js` covering double-spend, race conditions, IDOR, price tampering, and coupon abuse.
 12. Operational Guide: Created `SECURITY.md` checklist covering secret rotation, Atlas network rules, and backups.
+13. Server-Side Gift Vouchers: Real vouchers stored in MongoDB with atomic wallet crediting, use limits, and duplicate-redemption guards. Client-side fake 50 ৳ recharge on random codes completely removed.
 
 HOW TO APPLY:
 -------------

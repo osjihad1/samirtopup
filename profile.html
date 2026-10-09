@@ -557,7 +557,7 @@
       }
     }
 
-    function handleVoucherRedeem(e) {
+    async function handleVoucherRedeem(e) {
       e.preventDefault();
       const user = API.getUser();
       if (!user) {
@@ -565,19 +565,45 @@
         return;
       }
 
-      const code = document.getElementById("voucherCodeInput").value.trim();
-      if (code.length < 8) {
-        showToast("ভাউচার কোডটি সঠিক নয়!", "error");
+      const input = document.getElementById("voucherCodeInput");
+      const code = input.value.trim().toUpperCase();
+      if (!code || code.length < 4) {
+        showToast("অনুগ্রহ করে একটি সঠিক ভাউচার কোড লিখুন!", "error");
         return;
       }
-      showToast("Voucher redeemed successfully! 50 ৳ added.", "success");
-      if (user) {
-        user.balance = (user.balance || 0) + 50;
-        API.setUser(user);
-        document.getElementById("statBalance").textContent = `৳${user.balance.toLocaleString()}`;
-        renderUserNav();
+
+      const btn = e.target.querySelector("button[type='submit']");
+      const origText = btn ? btn.textContent : "";
+      if (btn) { btn.disabled = true; btn.textContent = "ভাউচার যাচাই করা হচ্ছে..."; }
+
+      try {
+        const res = await fetch("/api/wallet?action=redeem_voucher", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          showToast(data.message || `🎉 অভিনন্দন! ৳${data.amount} ওয়ালেটে যুক্ত হয়েছে!`, "success");
+          if (user) {
+            user.balance = data.balance !== undefined ? data.balance : ((user.balance || 0) + Number(data.amount));
+            API.setUser(user);
+            const balEl = document.getElementById("statBalance");
+            if (balEl) balEl.textContent = `৳${user.balance.toLocaleString()}`;
+            renderUserNav();
+            if (typeof renderTransactionLedger === 'function') renderTransactionLedger();
+          }
+          input.value = "";
+        } else {
+          showToast(data.error || "অবৈধ বা মেয়াদোত্তীর্ণ ভাউচার কোড!", "error");
+        }
+      } catch (err) {
+        showToast("সার্ভার এরর! কিছুক্ষণ পর আবার চেষ্টা করুন।", "error");
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = origText; }
       }
-      document.getElementById("voucherCodeInput").value = "";
     }
   </script>
 </body>

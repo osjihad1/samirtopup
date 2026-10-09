@@ -201,12 +201,16 @@ async function findUser(query) {
 }
 
 async function createUser(user) {
+  if (!user.id) {
+    user.id = 'USR-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+  }
   const db = await connectMongo();
   if (db) {
     await db.collection('users').insertOne(user);
     return user;
   }
   const local = getDb();
+  if (!local.users) local.users = [];
   local.users.push(user);
   saveDb(local);
   return user;
@@ -565,6 +569,229 @@ async function incrementCouponUse(code) {
   }
 }
 
+// --- GIFT VOUCHERS (Wallet Credit Vouchers) ---
+async function findVoucher(code) {
+  if (!code) return null;
+  const clean = String(code).trim().toUpperCase();
+  const db = await connectMongo();
+  if (db) {
+    try {
+      return await db.collection('vouchers').findOne({ code: clean });
+    } catch (e) {}
+  }
+  const local = getDb();
+  return (local.vouchers || []).find(v => v.code && v.code.toUpperCase() === clean);
+}
+
+async function getAllVouchers() {
+  const db = await connectMongo();
+  if (db) {
+    try {
+      return await db.collection('vouchers').find({}).sort({ created_at: -1 }).toArray();
+    } catch (e) {}
+  }
+  const local = getDb();
+  return local.vouchers || [];
+}
+
+async function createVoucherDoc({ code, amount, maxUses = 1, expiresAt = null, createdBy = 'admin' }) {
+  const cleanCode = String(code).trim().toUpperCase();
+  const newVoucher = {
+    id: 'VOUCH-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+    code: cleanCode,
+    amount: Number(amount) || 0,
+    maxUses: Number(maxUses) || 1,
+    usedCount: 0,
+    redeemedBy: [],
+    redemptions: [],
+    active: true,
+    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+    createdBy: createdBy || 'admin',
+    created_at: new Date().toISOString()
+  };
+
+  const db = await connectMongo();
+  if (db) {
+    try {
+      await db.collection('vouchers').insertOne(newVoucher);
+      return newVoucher;
+    } catch (e) {}
+  }
+  const local = getDb();
+  if (!local.vouchers) local.vouchers = [];
+  local.vouchers.unshift(newVoucher);
+  saveDb(local);
+  return newVoucher;
+}
+
+async function deleteVoucherDoc(idOrCode) {
+  const db = await connectMongo();
+  if (db) {
+    try {
+      await db.collection('vouchers').deleteOne({
+        $or: [{ id: idOrCode }, { code: String(idOrCode).trim().toUpperCase() }]
+      });
+      return true;
+    } catch (e) {}
+  }
+  const local = getDb();
+  if (local.vouchers) {
+    local.vouchers = local.vouchers.filter(v => v.id !== idOrCode && v.code !== String(idOrCode).trim().toUpperCase());
+    saveDb(local);
+  }
+  return true;
+}
+
+async function toggleVoucherDoc(idOrCode, active) {
+  const db = await connectMongo();
+  if (db) {
+    try {
+      await db.collection('vouchers').updateOne(
+        { $or: [{ id: idOrCode }, { code: String(idOrCode).trim().toUpperCase() }] },
+        { $set: { active: !!active, updated_at: new Date() } }
+      );
+      return true;
+    } catch (e) {}
+  }
+  const local = getDb();
+  if (local.vouchers) {
+    const v = local.vouchers.find(x => x.id === idOrCode || x.code === String(idOrCode).trim().toUpperCase());
+    if (v) {
+      v.active = !!active;
+      saveDb(local);
+    }
+  }
+  return true;
+}
+
+async function redeemVoucherAtomic({ code, userId, userName = '', userPhone = '' }) {
+  if (!code || !userId) {
+    return { success: false, error: 'ভাউচার কোড এবং ইউজার আইডি আবশ্যক!' };
+  }
+  const cleanCode = String(code).trim().toUpperCase();
+
+  const db = await connectMongo();
+  if (db) {
+    try {
+      const voucher = await db.collection('vouchers').findOne({ code: cleanCode });
+      if (!voucher) {
+        return { success: false, error: 'ভুল ভাউচার কোড! এই কোডের কোনো ভাউচার নেই।' };
+      }
+      if (voucher.active === false) {
+        return { success: false, error: 'এই ভাউচারটি নিষ্ক্রিয় বা বন্ধ রাখা হয়েছে।' };
+      }
+      if (voucher.expiresAt && new Date() > new Date(voucher.expiresAt)) {
+        return { success: false, error: 'এই ভাউচারটির মেয়াদ শেষ হয়ে গেছে!' };
+      }
+      if (voucher.usedCount >= voucher.maxUses) {
+        return { success: false, error: 'এই ভাউচারটির ব্যবহারের সীমা শেষ হয়ে গেছে!' };
+      }
+      if (Array.isArray(voucher.redeemedBy) && voucher.redeemedBy.includes(userId)) {
+        return { success: false, error: 'আপনি ইতিমধ্যে এই ভাউচার কোডটি একবার ব্যবহার করেছেন!' };
+      }
+
+      // Atomic update on voucher to prevent race conditions
+      const vRes = await db.collection('vouchers').findOneAndUpdate(
+        { 
+          code: cleanCode, 
+          active: { $ne: false }, 
+          usedCount: { $lt: voucher.maxUses },
+          redeemedBy: { $ne: userId }
+        },
+        { 
+          $inc: { usedCount: 1 },
+          $push: { 
+            redeemedBy: userId,
+            redemptions: {
+              userId,
+              userName,
+              userPhone,
+              redeemedAt: new Date().toISOString()
+            }
+          }
+        },
+        { returnDocument: 'after' }
+      );
+
+      if (!vRes) {
+        return { success: false, error: 'ভাউচার রিডিম ব্যর্থ হয়েছে! সীমা অতিক্রম বা ইতিমধ্যে ব্যবহৃত।' };
+      }
+
+      // Credit balance to user atomically in MongoDB
+      const userRes = await db.collection('users').findOneAndUpdate(
+        { $or: [{ id: userId }, { _id: userId }] },
+        { 
+          $inc: { balance: Number(voucher.amount) },
+          $set: { updated_at: new Date() }
+        },
+        { returnDocument: 'after' }
+      );
+
+      const newBalance = userRes ? (userRes.balance || 0) : 0;
+
+      await createAuditLog({
+        who: userName || userId,
+        action: 'VOUCHER_REDEEM',
+        target: cleanCode,
+        details: `User ${userName} (${userPhone}) redeemed voucher ${cleanCode} for ৳${voucher.amount}. New balance: ৳${newBalance}`
+      });
+
+      return {
+        success: true,
+        amount: voucher.amount,
+        balance: newBalance,
+        voucher: vRes
+      };
+    } catch (e) {
+      console.error('Error redeeming voucher in mongo:', e.message);
+    }
+  }
+
+  // Fallback local storage
+  const local = getDb();
+  if (!local.vouchers) local.vouchers = [];
+  const voucher = local.vouchers.find(v => v.code && v.code.toUpperCase() === cleanCode);
+  if (!voucher) {
+    return { success: false, error: 'ভুল ভাউচার কোড! এই কোডের কোনো ভাউচার নেই।' };
+  }
+  if (voucher.active === false) {
+    return { success: false, error: 'এই ভাউচারটি নিষ্ক্রিয় বা বন্ধ রাখা হয়েছে।' };
+  }
+  if (voucher.expiresAt && new Date() > new Date(voucher.expiresAt)) {
+    return { success: false, error: 'এই ভাউচারটির মেয়াদ শেষ হয়ে গেছে!' };
+  }
+  if ((voucher.usedCount || 0) >= (voucher.maxUses || 1)) {
+    return { success: false, error: 'এই ভাউচারটির ব্যবহারের সীমা শেষ হয়ে গেছে!' };
+  }
+  if (!voucher.redeemedBy) voucher.redeemedBy = [];
+  if (voucher.redeemedBy.includes(userId)) {
+    return { success: false, error: 'আপনি ইতিমধ্যে এই ভাউচার কোডটি একবার ব্যবহার করেছেন!' };
+  }
+
+  voucher.usedCount = (voucher.usedCount || 0) + 1;
+  voucher.redeemedBy.push(userId);
+  if (!voucher.redemptions) voucher.redemptions = [];
+  voucher.redemptions.push({ userId, userName, userPhone, redeemedAt: new Date().toISOString() });
+
+  // Update user in local
+  let newBalance = 0;
+  if (local.users) {
+    const u = local.users.find(x => x.id === userId);
+    if (u) {
+      u.balance = (Number(u.balance) || 0) + Number(voucher.amount);
+      newBalance = u.balance;
+    }
+  }
+  saveDb(local);
+
+  return {
+    success: true,
+    amount: voucher.amount,
+    balance: newBalance,
+    voucher
+  };
+}
+
 // --- SAFE PUBLIC RECENT ORDERS (Anonymized) ---
 async function getPublicOrders(limit = 10) {
   const db = await connectMongo();
@@ -657,6 +884,12 @@ module.exports = {
   findAuditLogs,
   findCoupon,
   incrementCouponUse,
+  findVoucher,
+  getAllVouchers,
+  createVoucherDoc,
+  deleteVoucherDoc,
+  toggleVoucherDoc,
+  redeemVoucherAtomic,
   getPublicOrders,
   getPublicLeaderboard,
   hitLimit,

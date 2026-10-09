@@ -10,7 +10,12 @@ const {
   parseBody, 
   setCors,
   createAuditLog,
-  findAuditLogs
+  findAuditLogs,
+  getAllVouchers,
+  createVoucherDoc,
+  deleteVoucherDoc,
+  toggleVoucherDoc,
+  findVoucher
 } = require('./_db');
 const { 
   createAdminSessionToken, 
@@ -123,6 +128,7 @@ module.exports = async function handler(req, res) {
     const walletReqs = await findWalletRequests();
     const settings = await getSettingsData();
     const auditLogs = await findAuditLogs(100);
+    const vouchers = await getAllVouchers();
 
     const totalRevenue = orders
       .filter(o => o.status === 'Completed')
@@ -144,7 +150,8 @@ module.exports = async function handler(req, res) {
         completedOrders,
         cancelledOrders,
         totalUsers: users.length,
-        pendingWalletReqs
+        pendingWalletReqs,
+        totalVouchers: vouchers.length
       },
       users: users.map(u => {
         const { password, salt, hash, ...safe } = u;
@@ -153,7 +160,8 @@ module.exports = async function handler(req, res) {
       recentOrders: orders.slice(0, 50),
       walletRequests: walletReqs.slice(0, 100),
       auditLogs,
-      settings
+      settings,
+      vouchers
     });
   }
 
@@ -231,6 +239,82 @@ module.exports = async function handler(req, res) {
       });
 
       return res.status(200).json({ success: true, balance: newBal, userId: user.id });
+    }
+
+    // 3. Create Gift Voucher
+    if (action === 'create_voucher') {
+      const auth = verifyAdminRequest(req);
+      if (!auth.valid) {
+        return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন সেশন প্রয়োজন।' });
+      }
+
+      const { code, amount, maxUses, expiresAt } = data;
+      if (!code || !amount) {
+        return res.status(400).json({ error: 'ভাউচার কোড এবং টাকার পরিমাণ আবশ্যক!' });
+      }
+
+      const numAmount = Number(amount);
+      if (isNaN(numAmount) || numAmount <= 0) {
+        return res.status(400).json({ error: 'সঠিক টাকার পরিমাণ দিন!' });
+      }
+
+      const existing = await findVoucher(code);
+      if (existing) {
+        return res.status(400).json({ error: 'এই ভাউচার কোডটি ইতিমধ্যে রয়েছে! অন্য একটি কোড দিন।' });
+      }
+
+      const newVoucher = await createVoucherDoc({
+        code,
+        amount: numAmount,
+        maxUses: Number(maxUses) || 1,
+        expiresAt: expiresAt || null,
+        createdBy: auth.admin?.name || 'Admin'
+      });
+
+      await createAuditLog({
+        who: auth.admin?.name || 'Admin',
+        action: 'CREATE_VOUCHER',
+        target: newVoucher.code,
+        details: `Created gift voucher ${newVoucher.code} for ৳${newVoucher.amount} (Max uses: ${newVoucher.maxUses})`
+      });
+
+      return res.status(201).json({ success: true, voucher: newVoucher });
+    }
+
+    // 4. Delete Gift Voucher
+    if (action === 'delete_voucher') {
+      const auth = verifyAdminRequest(req);
+      if (!auth.valid) {
+        return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন সেশন প্রয়োজন।' });
+      }
+
+      const { voucherId } = data;
+      if (!voucherId) {
+        return res.status(400).json({ error: 'Voucher ID is required' });
+      }
+
+      await deleteVoucherDoc(voucherId);
+
+      await createAuditLog({
+        who: auth.admin?.name || 'Admin',
+        action: 'DELETE_VOUCHER',
+        target: String(voucherId),
+        details: `Deleted gift voucher ${voucherId}`
+      });
+
+      return res.status(200).json({ success: true });
+    }
+
+    // 5. Toggle Voucher Active Status
+    if (action === 'toggle_voucher') {
+      const auth = verifyAdminRequest(req);
+      if (!auth.valid) {
+        return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস! সঠিক অ্যাডমিন সেশন প্রয়োজন।' });
+      }
+
+      const { voucherId, active } = data;
+      await toggleVoucherDoc(voucherId, active);
+      return res.status(200).json({ success: true });
     }
   }
 

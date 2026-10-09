@@ -10,7 +10,9 @@ const {
   parseBody, 
   setCors,
   createAuditLog,
-  isMaintenanceMode
+  isMaintenanceMode,
+  redeemVoucherAtomic,
+  hitLimit
 } = require('./_db');
 const { verifyUserRequest, verifyAdminRequest, verifyTurnstileToken, verifyCaptcha } = require('./_crypto');
 const { sendTelegramAlert } = require('./_telegram');
@@ -48,7 +50,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(all);
   }
 
-  // POST: Submit add-money deposit request (Zero Direct API Access without Valid User Cookie)
+  // POST: Submit add-money deposit request or redeem voucher (Zero Direct API Access without Valid User Cookie)
   if (req.method === 'POST') {
     if (await isMaintenanceMode()) {
       return res.status(503).json({
@@ -74,6 +76,42 @@ module.exports = async function handler(req, res) {
     }
 
     const data = await parseBody(req);
+    const action = url.searchParams.get('action') || (data && data.action);
+
+    // ==========================================
+    // ACTION: Redeem Gift Voucher
+    // ==========================================
+    if (action === 'redeem_voucher') {
+      const { code } = data;
+      if (!code) {
+        return res.status(400).json({ error: 'অনুগ্রহ করে ভাউচার কোড দিন!' });
+      }
+
+      // Rate limit voucher redemptions per user to prevent brute-force (6 attempts per 10 mins)
+      const rateLimitKey = 'voucher_redeem:' + (dbUser.id || 'anon');
+      if (!(await hitLimit(rateLimitKey, 6, 10 * 60 * 1000))) {
+        return res.status(429).json({ error: 'অতিরিক্ত ভুল চেষ্টা! ১০ মিনিট পর পুনরায় চেষ্টা করুন।' });
+      }
+
+      const result = await redeemVoucherAtomic({
+        code,
+        userId: dbUser.id,
+        userName: dbUser.name || sessionUser.name,
+        userPhone: dbUser.phone || sessionUser.phone
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error || 'ভাউচার রিডিম ব্যর্থ হয়েছে!' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        amount: result.amount,
+        balance: result.balance,
+        message: `🎉 অভিনন্দন! ভাউচার সফলভাবে রিডিম হয়েছে। ৳${result.amount} আপনার ওয়ালেটে যুক্ত করা হয়েছে।`
+      });
+    }
+
     const { amount, method, sender_number, trxId, turnstileToken, captchaAnswer, captchaToken } = data;
     const reqPhone = dbUser.phone || sessionUser.phone || '';
     const reqUserName = dbUser.name || sessionUser.name || '';

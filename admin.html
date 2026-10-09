@@ -653,6 +653,10 @@
       <button class="tab-btn" onclick="switchTab('socials', this)">
         <span>💬 Helpline & Socials</span>
       </button>
+      <button class="tab-btn" onclick="switchTab('vouchers', this)">
+        <span>🎁 Gift Vouchers</span>
+        <span class="tab-badge" id="tabBadgeVouchers">0</span>
+      </button>
     </div>
 
     <!-- 1. Orders Management Panel -->
@@ -1069,6 +1073,84 @@
       </form>
     </div>
 
+    <!-- 10. Gift Vouchers Management Panel -->
+    <div id="panelVouchers" class="admin-panel-card" style="display: none;">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <span>🎁 Gift Vouchers Management (গিফট ভাউচার ম্যানেজমেন্ট)</span>
+        </div>
+      </div>
+
+      <!-- Create Voucher Section -->
+      <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+        <h3 style="font-size: 16px; font-weight: 700; color: #ff6702; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <span>➕ নতুন ভাউচার তৈরি করুন</span>
+        </h3>
+        <form id="createVoucherForm" onsubmit="handleCreateVoucher(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end;">
+          <div class="admin-form-group" style="margin-bottom: 0;">
+            <label class="admin-form-label">ভাউচার কোড</label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="newVoucherCode" class="admin-form-input" placeholder="e.g. SAMIR-50TK-2026" required style="font-family: monospace; font-weight: 700; text-transform: uppercase;">
+              <button type="button" onclick="generateRandomVoucherCode()" class="btn-act btn-act-process" style="padding: 0 12px; white-space: nowrap;" title="অটো কোড জেনারেট করুন">
+                🎲 জেনারেট
+              </button>
+            </div>
+          </div>
+
+          <div class="admin-form-group" style="margin-bottom: 0;">
+            <label class="admin-form-label">টাকার পরিমাণ (৳)</label>
+            <input type="number" id="newVoucherAmount" class="admin-form-input" placeholder="e.g. 50" min="1" required>
+          </div>
+
+          <div class="admin-form-group" style="margin-bottom: 0;">
+            <label class="admin-form-label">সর্বোচ্চ ব্যবহার (Max Uses)</label>
+            <input type="number" id="newVoucherMaxUses" class="admin-form-input" placeholder="1" value="1" min="1" required title="কতজন ব্যবহার করতে পারবে">
+          </div>
+
+          <div class="admin-form-group" style="margin-bottom: 0;">
+            <label class="admin-form-label">মেয়াদ শেষ (Expiry Date - ঐচ্ছিক)</label>
+            <input type="date" id="newVoucherExpiry" class="admin-form-input">
+          </div>
+
+          <div>
+            <button type="submit" id="btnCreateVoucher" class="btn-buy-now" style="width: 100%; height: 42px; margin-top: 0; padding: 0 16px;">
+              <span>➕ ভাউচার তৈরি করুন</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Vouchers List Table -->
+      <div class="panel-header-row" style="margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 15px; font-weight: 700; color: white;">তালিকাকৃত ভাউচারসমূহ</span>
+          <span id="voucherCountBadge" class="tab-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">0 টি</span>
+        </div>
+        <div style="max-width: 250px; width: 100%;">
+          <input type="text" id="voucherSearchInput" oninput="renderVouchersTable()" placeholder="🔍 ভাউচার কোড খুঁজুন..." class="search-input" style="width: 100%;">
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ভাউচার কোড</th>
+              <th>টাকার পরিমাণ</th>
+              <th>ব্যবহার / সীমা</th>
+              <th>স্ট্যাটাস</th>
+              <th>মেয়াদ</th>
+              <th>তৈরির তারিখ</th>
+              <th>অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody id="vouchersTableBody">
+            <!-- Dynamically populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 
   <!-- Scripts -->
@@ -1114,6 +1196,7 @@
     let adminWalletReqs = [];
     let adminUsers = [];
     let adminBanners = [];
+    let adminVouchers = [];
     let siteSettings = {};
     let activeFilter = 'all';
 
@@ -1238,6 +1321,7 @@
           const data = await res.json();
           adminOrders = data.recentOrders || [];
           adminUsers = data.users || [];
+          adminVouchers = data.vouchers || [];
           if (data.stats) {
             document.getElementById("statTotalOrders").textContent = data.stats.totalOrders || 0;
             document.getElementById("statPendingOrders").textContent = data.stats.pendingOrders || 0;
@@ -1252,6 +1336,7 @@
             localStorage.setItem("samirtopup_settings", JSON.stringify(siteSettings));
             updateMaintenancePill();
           }
+          renderVouchersTable();
         }
       } catch (e) {}
 
@@ -1269,6 +1354,7 @@
       renderOrdersTable();
       renderWalletTable();
       renderUsersTable();
+      renderVouchersTable();
       populateFormFields();
     }
 
@@ -1805,6 +1891,178 @@
       } catch (e) {}
     }
 
+    // Gift Vouchers Management
+    function generateRandomVoucherCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let rand1 = '', rand2 = '';
+      for (let i = 0; i < 4; i++) rand1 += chars.charAt(Math.floor(Math.random() * chars.length));
+      for (let i = 0; i < 4; i++) rand2 += chars.charAt(Math.floor(Math.random() * chars.length));
+      const code = `SAMIR-${rand1}-${rand2}`;
+      document.getElementById("newVoucherCode").value = code;
+    }
+
+    async function handleCreateVoucher(e) {
+      e.preventDefault();
+      const code = document.getElementById("newVoucherCode").value.trim().toUpperCase();
+      const amount = parseFloat(document.getElementById("newVoucherAmount").value);
+      const maxUses = parseInt(document.getElementById("newVoucherMaxUses").value) || 1;
+      const expiry = document.getElementById("newVoucherExpiry").value;
+
+      if (!code || isNaN(amount) || amount <= 0) {
+        showToast("সঠিক ভাউচার কোড এবং টাকার পরিমাণ দিন!", "error");
+        return;
+      }
+
+      const btn = document.getElementById("btnCreateVoucher");
+      if (btn) { btn.disabled = true; btn.innerHTML = "<span>তৈরি হচ্ছে...</span>"; }
+
+      try {
+        const res = await fetch("/api/admin?action=create_voucher", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            amount,
+            maxUses,
+            expiresAt: expiry ? new Date(expiry).toISOString() : null
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`✅ ভাউচার "${code}" সফলভাবে তৈরি হয়েছে!`, "success");
+          if (data.voucher) {
+            adminVouchers.unshift(data.voucher);
+          }
+          renderVouchersTable();
+          document.getElementById("createVoucherForm").reset();
+          document.getElementById("newVoucherMaxUses").value = "1";
+        } else {
+          showToast(data.error || "ভাউচার তৈরি ব্যর্থ হয়েছে!", "error");
+        }
+      } catch (err) {
+        showToast("সার্ভার এরর!", "error");
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = "<span>➕ ভাউচার তৈরি করুন</span>"; }
+      }
+    }
+
+    async function deleteVoucher(voucherId) {
+      try {
+        const res = await fetch("/api/admin?action=delete_voucher", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voucherId })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          adminVouchers = adminVouchers.filter(v => v.id !== voucherId && v.code !== voucherId);
+          renderVouchersTable();
+          showToast("ভাউচারটি সফলভাবে মুছে ফেলা হয়েছে!", "info");
+        } else {
+          showToast(data.error || "মুছে ফেলতে ব্যর্থ!", "error");
+        }
+      } catch (err) {
+        showToast("সার্ভার এরর!", "error");
+      }
+    }
+
+    async function toggleVoucher(voucherId, currentActive) {
+      const newActive = !currentActive;
+      try {
+        const res = await fetch("/api/admin?action=toggle_voucher", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voucherId, active: newActive })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          const v = adminVouchers.find(x => x.id === voucherId || x.code === voucherId);
+          if (v) v.active = newActive;
+          renderVouchersTable();
+          showToast(`ভাউচারটি ${newActive ? 'সক্রিয় (Active)' : 'নিষ্ক্রিয় (Disabled)'} করা হয়েছে!`, "info");
+        } else {
+          showToast(data.error || "আপডেট ব্যর্থ!", "error");
+        }
+      } catch (err) {
+        showToast("সার্ভার এরর!", "error");
+      }
+    }
+
+    function renderVouchersTable() {
+      const tbody = document.getElementById("vouchersTableBody");
+      if (!tbody) return;
+      const search = (document.getElementById("voucherSearchInput")?.value || "").toLowerCase().trim();
+
+      const filtered = adminVouchers.filter(v => {
+        return !search || (v.code && v.code.toLowerCase().includes(search));
+      });
+
+      tbody.innerHTML = "";
+      const badge = document.getElementById("voucherCountBadge");
+      if (badge) badge.textContent = `${adminVouchers.length} টি`;
+      const tabBadge = document.getElementById("tabBadgeVouchers");
+      if (tabBadge) tabBadge.textContent = adminVouchers.length;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 25px;">কোনো ভাউচার পাওয়া যায়নি। উপরে নতুন ভাউচার তৈরি করুন।</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(v => {
+        const tr = document.createElement("tr");
+        const isExpired = v.expiresAt && new Date() > new Date(v.expiresAt);
+        const isFullyUsed = (v.usedCount || 0) >= (v.maxUses || 1);
+        const isActive = v.active !== false && !isExpired && !isFullyUsed;
+
+        let statusBadge = '';
+        if (v.active === false) {
+          statusBadge = `<span class="status-badge Cancelled">Disabled</span>`;
+        } else if (isExpired) {
+          statusBadge = `<span class="status-badge Cancelled">Expired</span>`;
+        } else if (isFullyUsed) {
+          statusBadge = `<span class="status-badge Completed">Fully Used</span>`;
+        } else {
+          statusBadge = `<span class="status-badge Processing" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">Active</span>`;
+        }
+
+        tr.innerHTML = `
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-family: monospace; font-weight: 800; color: #38bdf8; font-size: 14px; letter-spacing: 1px;">${escapeText(v.code)}</span>
+              <button type="button" onclick="navigator.clipboard.writeText('${escapeText(v.code)}'); showToast('ভাউচার কোড কপি করা হয়েছে!', 'success')" class="btn-act" style="padding: 2px 6px; font-size: 11px;" title="Copy Code">📋</button>
+            </div>
+          </td>
+          <td><strong style="color: #ff6702; font-size: 15px;">৳${v.amount}</strong></td>
+          <td>
+            <strong style="color: ${isFullyUsed ? '#ef4444' : '#facc15'};">${v.usedCount || 0}</strong> / ${v.maxUses || 1}
+          </td>
+          <td>${statusBadge}</td>
+          <td>
+            <small style="color: ${isExpired ? '#f87171' : '#94a3b8'};">
+              ${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString('en-GB') : 'আজীবন (No Expiry)'}
+            </small>
+          </td>
+          <td>
+            <small style="color: #94a3b8;">${v.created_at ? new Date(v.created_at).toLocaleDateString('en-GB') : 'N/A'}</small>
+          </td>
+          <td>
+            <div class="action-btn-group">
+              <button onclick="toggleVoucher('${v.id || v.code}', ${v.active !== false})" class="btn-act ${v.active !== false ? 'btn-act-process' : 'btn-act-complete'}" title="Toggle Active">
+                ${v.active !== false ? 'নিষ্ক্রিয়' : 'সক্রিয়'}
+              </button>
+              <button onclick="deleteVoucher('${v.id || v.code}')" class="btn-act btn-act-cancel" title="Delete">
+                🗑️
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
     // Tab Switching
     function switchTab(tabName, btn) {
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -1819,6 +2077,8 @@
       document.getElementById("panelSpinSale").style.display = tabName === 'spin_sale' ? 'block' : 'none';
       document.getElementById("panelUsers").style.display = tabName === 'users' ? 'block' : 'none';
       document.getElementById("panelSocials").style.display = tabName === 'socials' ? 'block' : 'none';
+      const pVouchers = document.getElementById("panelVouchers");
+      if (pVouchers) pVouchers.style.display = tabName === 'vouchers' ? 'block' : 'none';
     }
 
     // Init

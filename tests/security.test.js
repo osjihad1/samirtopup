@@ -236,6 +236,55 @@ async function runTests() {
     assert.doesNotThrow(() => createOrder({ amount: 100 }));
   });
 
+  // ==========================================
+  // Test 10: Server-Side Gift Voucher Guard & Abuse Prevention
+  // ==========================================
+  await test('Voucher Security: Random codes fail, duplicate redemption blocked, valid voucher credits once', async () => {
+    const { createVoucherDoc, redeemVoucherAtomic, createUser } = require('../api/_db');
+    
+    // Create test user
+    const testUser = await createUser({
+      name: 'Voucher Tester',
+      phone: '018998877' + Math.floor(10 + Math.random() * 89),
+      email: 'voucher' + Date.now() + '@test.com'
+    });
+
+    // 1. Random / non-existent code fails
+    const fakeRedeem = await redeemVoucherAtomic({
+      code: 'RANDOM-NON-EXISTENT-CODE',
+      userId: testUser.id,
+      userName: testUser.name,
+      userPhone: testUser.phone
+    });
+    assert.strictEqual(fakeRedeem.success, false);
+
+    // 2. Real voucher created by admin
+    const testVoucher = await createVoucherDoc({
+      code: 'TEST-SAMIR-100TK-' + Date.now(),
+      amount: 100,
+      maxUses: 1
+    });
+
+    // 3. First redeem succeeds
+    const firstRedeem = await redeemVoucherAtomic({
+      code: testVoucher.code,
+      userId: testUser.id,
+      userName: testUser.name,
+      userPhone: testUser.phone
+    });
+    assert.strictEqual(firstRedeem.success, true);
+    assert.strictEqual(firstRedeem.amount, 100);
+
+    // 4. Duplicate redeem by same user fails
+    const dupRedeem = await redeemVoucherAtomic({
+      code: testVoucher.code,
+      userId: testUser.id,
+      userName: testUser.name,
+      userPhone: testUser.phone
+    });
+    assert.strictEqual(dupRedeem.success, false);
+  });
+
   console.log(`\n==================================================`);
   console.log(`Result: ${passed}/${total} Tests Passed`);
   console.log(`==================================================\n`);
