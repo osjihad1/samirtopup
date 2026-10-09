@@ -9,7 +9,9 @@ const {
   getSettingsData, 
   parseBody, 
   setCors,
-  hitLimit
+  purgeDemoData,
+  createAuditLog,
+  findAuditLogs
 } = require('./_db');
 const { 
   createAdminSessionToken, 
@@ -116,6 +118,7 @@ module.exports = async function handler(req, res) {
     }
 
     // 3. Purge all legacy demo users, demo orders, and demo requests permanently
+    await purgeDemoData();
 
     if (action === 'clean_demo') {
       return res.status(200).json({ 
@@ -128,6 +131,7 @@ module.exports = async function handler(req, res) {
     const users = await getAllUsers();
     const walletReqs = await findWalletRequests();
     const settings = await getSettingsData();
+    const auditLogs = await findAuditLogs(100);
 
     const totalRevenue = orders
       .filter(o => o.status === 'Completed')
@@ -156,6 +160,8 @@ module.exports = async function handler(req, res) {
         return safe;
       }),
       recentOrders: orders.slice(0, 50),
+      walletRequests: walletReqs.slice(0, 100),
+      auditLogs,
       settings
     });
   }
@@ -169,7 +175,7 @@ module.exports = async function handler(req, res) {
     // 1. Admin Secure Login with Rate Limiting
     if (action === 'login') {
       const clientIp = getClientIp(req);
-      const rateCheck = (await hitLimit('admin:' + clientIp, 5, 15 * 60 * 1000)) ? { allowed: true } : { allowed: false, message: 'অতিরিক্ত চেষ্টা! অ্যাডমিন লগইন ১৫ মিনিটের জন্য লক।' };
+      const rateCheck = checkLoginRateLimit(clientIp);
 
       if (!rateCheck.allowed) {
         return res.status(429).json({ error: rateCheck.message });
@@ -193,7 +199,6 @@ module.exports = async function handler(req, res) {
         setAdminCookie(res, token);
         return res.status(200).json({
           success: true,
-          token,
           admin: { name: 'Samir Topup Master', role: 'Super Admin' }
         });
       } else {
@@ -214,7 +219,7 @@ module.exports = async function handler(req, res) {
       if (!user) return res.status(404).json({ error: 'ব্যবহারকারী খুঁজে পাওয়া যায়নি!' });
 
       const num = parseFloat(amount);
-      if (!Number.isFinite(num) || num <= 0 || num > 100000) {
+      if (isNaN(num) || num <= 0) {
         return res.status(400).json({ error: 'সঠিক টাকার পরিমাণ দিন!' });
       }
 
@@ -223,6 +228,16 @@ module.exports = async function handler(req, res) {
         : Math.max(0, (user.balance || 0) - num);
 
       await updateUser(user.id, { balance: newBal });
+
+      await createAuditLog({
+        who: auth.admin?.name || 'Admin',
+        action: 'BALANCE_ADJUST',
+        target: String(user.id),
+        before: { balance: user.balance || 0 },
+        after: { balance: newBal },
+        details: `${type === 'add' ? 'Added' : 'Deducted'} ${num} ৳ to user ${user.id} (${user.phone || user.name})`
+      });
+
       return res.status(200).json({ success: true, balance: newBal, userId: user.id });
     }
   }

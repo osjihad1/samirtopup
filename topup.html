@@ -9,7 +9,7 @@
   
   <link rel="icon" type="image/png" href="images/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/custom.css">\n  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/custom.css">
 </head>
 <body>
 
@@ -236,12 +236,16 @@
         <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">Player UID: <strong id="payModalUid" style="color: #38bdf8;"></strong></p>
       </div>
 
-      <div style="background: #041c30; padding: 14px; border-radius: 12px; border: 1px solid #1a3a5c; margin-bottom: 16px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="color: #94a3b8; font-size: 13px;">Payable Amount:</span>
           <strong id="payModalAmount" style="color: #ff6702; font-size: 18px;">৳80</strong>
         </div>
-        <p id="payModalNumber" style="font-size: 13px; color: #cbd5e1; line-height: 1.5;"></p>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <p id="payModalNumber" style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin: 0;"></p>
+          <button id="copyPayNumBtn" type="button" onclick="copyPaymentNumber()" style="background: rgba(255, 103, 2, 0.2); border: 1px solid #ff6702; color: #ff6702; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+            📋 Copy Number
+          </button>
+        </div>
       </div>
 
       <div style="margin-bottom: 16px;">

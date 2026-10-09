@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en-BD">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>অর্ডার ট্র্যাকিং - SAMIR TOPUP</title>
+  <meta name="theme-color" content="#042d49">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body style="min-height: 100vh; display: flex; flex-direction: column;">
+
+  <!-- Header -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand-logo">
+        <img src="images/samir_logo.svg" alt="SAMIR TOPUP" class="logo-img">
+      </a>
+      <div class="nav-actions">
+        <a href="index.html" class="nav-link">হোম</a>
+        <a href="shop.html" class="nav-link">শপ</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;">
+    <div style="width: 100%; max-width: 500px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="font-size: 26px; font-weight: 800; color: white;">🔍 অর্ডার স্ট্যাটাস চেক</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-top: 6px;">আপনার Order ID এবং ব্যবহৃত মোবাইল নম্বরের শেষ ৪ ডিজিট দিয়ে তাৎক্ষণিক স্ট্যাটাস জানুন</p>
+      </div>
+
+      <div class="topup-card" style="padding: 28px;">
+        <form onsubmit="handleLookup(event)">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Order ID (যেমন: ST-12345)</label>
+            <input type="text" id="orderIdInput" class="input-field" placeholder="ST-XXXXX" required autocomplete="off" style="text-transform: uppercase;">
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">মোবাইল নম্বরের শেষ ৪ ডিজিট</label>
+            <input type="text" id="phoneLast4Input" class="input-field" placeholder="যেমন: 5678" maxlength="4" pattern="\d{4}" required autocomplete="off">
+          </div>
+
+          <button type="submit" id="lookupBtn" class="btn-buy-now" style="width: 100%; margin-top: 0;">
+            অর্ডার খুঁজুন 👉
+          </button>
+        </form>
+
+        <div id="lookupResult" style="display: none; margin-top: 24px; padding: 18px; background: rgba(2, 18, 34, 0.7); border-radius: 12px; border: 1px solid rgba(255, 103, 2, 0.3);">
+          <!-- Dynamic Order Result -->
+        </div>
+
+        <div id="lookupError" style="display: none; margin-top: 18px; padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #f87171; font-size: 13px; text-align: center;"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function handleLookup(e) {
+      e.preventDefault();
+      const id = document.getElementById("orderIdInput").value.trim().toUpperCase();
+      const last4 = document.getElementById("phoneLast4Input").value.trim();
+      const btn = document.getElementById("lookupBtn");
+      const resBox = document.getElementById("lookupResult");
+      const errBox = document.getElementById("lookupError");
+
+      errBox.style.display = "none";
+      resBox.style.display = "none";
+      btn.disabled = true;
+      btn.textContent = "খোঁজা হচ্ছে...";
+
+      try {
+        const res = await fetch(`/api/orders?id=${encodeURIComponent(id)}&last4=${encodeURIComponent(last4)}`);
+        const data = await res.json();
+
+        if (res.ok && data.id) {
+          const statusColors = {
+            Completed: '#10b981',
+            Processing: '#38bdf8',
+            Pending: '#f59e0b',
+            Cancelled: '#ef4444'
+          };
+          const color = statusColors[data.status] || '#94a3b8';
+
+          resBox.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 12px;">
+              <div>
+                <span style="font-size: 12px; color: #94a3b8;">অর্ডার আইডি:</span>
+                <strong style="display: block; font-size: 16px; color: white;">${escapeHtml(data.id)}</strong>
+              </div>
+              <span style="background: ${color}20; color: ${color}; border: 1px solid ${color}60; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">
+                ${escapeHtml(data.status)}
+              </span>
+            </div>
+            <div style="font-size: 13.5px; line-height: 1.8;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #94a3b8;">পণ্য:</span>
+                <strong>${escapeHtml(data.product)} (${escapeHtml(data.package)})</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #94a3b8;">প্লেয়ার UID:</span>
+                <span style="font-family: monospace;">${escapeHtml(data.playerId)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #94a3b8;">মূল্য:</span>
+                <strong style="color: #ff6702;">৳${escapeHtml(data.amount)}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #94a3b8;">তারিখ:</span>
+                <span style="color: #cbd5e1;">${escapeHtml(data.date)}</span>
+              </div>
+            </div>
+          `;
+          resBox.style.display = "block";
+        } else {
+          errBox.textContent = data.error || "অর্ডার খুঁজে পাওয়া যায়নি!";
+          errBox.style.display = "block";
+        }
+      } catch (err) {
+        errBox.textContent = "সার্ভারে যোগাযোগ করতে ব্যর্থ হয়েছে। পরে চেষ্টা করুন।";
+        errBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "অর্ডার খুঁজুন 👉";
+      }
+    }
+  </script>
+</body>
+</html>

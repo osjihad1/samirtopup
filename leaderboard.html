@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en-BD">
 <head>
   <meta charset="UTF-8">
@@ -9,7 +9,7 @@
   
   <link rel="icon" type="image/png" href="images/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/custom.css">\n  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/custom.css">
   <style>
     .leaderboard-table {
       width: 100%;
@@ -226,9 +226,27 @@
   <script src="js/spin.js"></script>
   <script src="js/app.js"></script>
   <script>
+    function escapeText(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
     let leaderList = [];
 
     document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const res = await fetch("/api/public?type=leaderboard");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.leaderboard && data.leaderboard.length > 0) {
+            leaderList = data.leaderboard;
+            renderPodium(leaderList);
+            renderTable(leaderList);
+            return;
+          }
+        }
+      } catch (e) {}
+
+      // Fallback to static fixtures if server unavailable
       const data = await API.getLeaderboard(20);
       leaderList = data.data || [];
       renderPodium(leaderList);
@@ -246,28 +264,28 @@
       podium.innerHTML = `
         <div class="podium-item second">
           <div class="podium-avatar">
-            <img src="${p2.avatar || 'images/avatars/avatar2.svg'}" alt="${p2.name}">
+            <img src="${escapeText(p2.avatar || 'images/avatars/avatar2.svg')}" alt="${escapeText(p2.name)}">
             <div class="podium-rank-badge">2</div>
           </div>
-          <div class="podium-name">${p2.name}</div>
+          <div class="podium-name">${escapeText(p2.name)}</div>
           <div class="podium-amount">৳${(p2.total_spend || 0).toLocaleString()}</div>
         </div>
 
         <div class="podium-item first">
           <div class="podium-avatar">
-            <img src="${p1.avatar || 'images/avatars/avatar1.svg'}" alt="${p1.name}">
+            <img src="${escapeText(p1.avatar || 'images/avatars/avatar1.svg')}" alt="${escapeText(p1.name)}">
             <div class="podium-rank-badge">1</div>
           </div>
-          <div class="podium-name">${p1.name} 👑</div>
+          <div class="podium-name">${escapeText(p1.name)} 👑</div>
           <div class="podium-amount">৳${(p1.total_spend || 0).toLocaleString()}</div>
         </div>
 
         <div class="podium-item third">
           <div class="podium-avatar">
-            <img src="${p3.avatar || 'images/avatars/avatar3.svg'}" alt="${p3.name}">
+            <img src="${escapeText(p3.avatar || 'images/avatars/avatar3.svg')}" alt="${escapeText(p3.name)}">
             <div class="podium-rank-badge">3</div>
           </div>
-          <div class="podium-name">${p3.name}</div>
+          <div class="podium-name">${escapeText(p3.name)}</div>
           <div class="podium-amount">৳${(p3.total_spend || 0).toLocaleString()}</div>
         </div>
       `;
@@ -292,11 +310,11 @@
           <td class="rank-cell ${rankClass}">#${rank}</td>
           <td>
             <div style="display: flex; align-items: center; gap: 10px;">
-              <img src="${p.avatar || 'images/avatars/default.svg'}" alt="${p.name}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #0c2b48;">
-              <span style="font-weight: 600;">${p.name}</span>
+              <img src="${escapeText(p.avatar || 'images/avatars/default.svg')}" alt="${escapeText(p.name)}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #0c2b48;">
+              <span style="font-weight: 600;">${escapeText(p.name)}</span>
             </div>
           </td>
-          <td style="color: #94a3b8;">${p.id}</td>
+          <td style="color: #94a3b8;">${escapeText(p.id || '#' + rank)}</td>
           <td style="color: #ff6702; font-weight: 700;">৳${(p.total_spend || 0).toLocaleString()}</td>
           <td>
             <span style="background: rgba(16,185,129,0.2); color: #34d399; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
@@ -310,7 +328,7 @@
 
     function searchLeaderboard() {
       const q = document.getElementById("leaderSearchInput")?.value.toLowerCase().trim() || "";
-      const filtered = leaderList.filter(p => p.name.toLowerCase().includes(q) || p.id.toString().includes(q));
+      const filtered = leaderList.filter(p => p.name.toLowerCase().includes(q) || (p.id && p.id.toString().includes(q)));
       renderTable(filtered);
     }
   </script>

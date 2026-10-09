@@ -1,7 +1,44 @@
-1. Copy everything in this folder over your project (same paths). Your images/ are untouched.
-2. DELETE .env from the repo:   git rm --cached .env   (and remove it from history with git filter-repo)
-3. In Vercel -> Settings -> Environment Variables set: MONGODB_URI, MONGODB_DB, AUTH_SECRET (48+ random chars),
-   ADMIN_SECRET (48+ random chars), ADMIN_USERNAME, ADMIN_PASSWORD (16+ chars). Optional: ALLOWED_ORIGINS.
-4. Rotate the MongoDB Atlas password FIRST (the old one was public).
-5. Test locally:  node tests/security.test.js
-6. api/_catalog.json is generated from js/data.js. If you change prices, regenerate it (ask me for the one-line script).
+SAMIR TOPUP - SECURITY & FEATURE PATCH APPLICATION GUIDE
+==========================================================
+Date: October 2026
+Version: Security Overhaul Patch 2.0
+
+OVERVIEW OF CHANGES INCLUDED IN THIS PATCH:
+------------------------------------------
+1. XSS & Protocol Sanitization: Audited all outputs; eliminated unsafe inline template literals; sanitized banner/notice URLs to prevent javascript: pseudo-protocol attacks.
+2. Demo Data Logic: Removed client-side purging by name/phone list. Only records marked with `isDemo: true` are filtered.
+3. Cookie-Only Admin Session: Removed admin token from sessionStorage and login JSON responses. Strictly enforces HttpOnly, SameSite, Secure cookies.
+4. Cloudflare Turnstile Integration: Added Turnstile support with server-side validation against Cloudflare API in `api/auth.js` and `api/wallet.js`, with math captcha fallback.
+5. Pricing Catalog: Generated `api/_catalog.json` and added `scripts/build-catalog.js` to rebuild catalog from `js/data.js`.
+6. Live Orders & Leaderboard: Created `api/public.js` returning anonymized recent orders and top spenders cached in-memory.
+7. Admin Audit Log: Added `audit_logs` collection tracking every approve/reject, balance adjustment, and order status update.
+8. Safe Password Reset: Safely replaced unauthenticated reset form with official Telegram helpline redirection.
+9. Telegram Admin Alerts & Public Tracking: Added `api/_telegram.js` for instant admin notifications and `orderstatus.html` for public lookup by Order ID + last 4 digits of phone.
+10. Enhanced UI & Mobile UX: Added copy buttons for payment numbers, dark contrast accents, and skeleton loading states.
+11. Security Test Suite: Provided `tests/security.test.js` covering double-spend, race conditions, IDOR, price tampering, and coupon abuse.
+12. Operational Guide: Created `SECURITY.md` checklist covering secret rotation, Atlas network rules, and backups.
+
+HOW TO APPLY:
+-------------
+1. Extract all files from `samir-topup-patch.zip` over your project directory root.
+2. In your Vercel Dashboard (or `.env` file), configure the following environment variables:
+   - MONGODB_URI
+   - MONGODB_DB
+   - AUTH_SECRET
+   - ADMIN_SECRET
+   - ADMIN_USERNAME
+   - ADMIN_PASSWORD
+   - TURNSTILE_SITE_KEY (optional, Cloudflare Turnstile)
+   - TURNSTILE_SECRET_KEY (optional, Cloudflare Turnstile)
+   - TELEGRAM_BOT_TOKEN (optional, Telegram notifications)
+   - TELEGRAM_ADMIN_CHAT_ID (optional, Telegram notifications)
+3. Deploy to Vercel:
+   git add .
+   git commit -m "Apply security & feature patch v2"
+   git push origin main
+
+BREAKING CHANGES:
+-----------------
+Admin authentication now strictly requires HttpOnly cookie support; API callers can no longer extract or supply tokens via JavaScript sessionStorage.
+Password reset page (forgetpassword.html) no longer submits simulated resets and redirects directly to official Telegram support.
+Existing orders using legacy demo names are now preserved and only records explicitly having isDemo: true will be excluded.

@@ -312,6 +312,16 @@ function renderUserNav() {
 }
 window.renderUserNav = renderUserNav;
 
+function sanitizeUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '#';
+  const trimmed = rawUrl.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
+    return '#';
+  }
+  return trimmed;
+}
+
 // Dynamic Banner Carousel
 let currentSlide = 0;
 let slideInterval = null;
@@ -334,9 +344,10 @@ async function initBannerCarousel() {
     const slide = document.createElement("div");
     slide.className = `carousel-slide ${idx === 0 ? "active" : ""}`;
     const imgUrl = b.image || (b.logo ? API.getImageUrl("banners", b.logo) : "images/banners/1791115595.jpg");
-    const clickAction = b.link ? `window.location.href='${b.link}'` : `openEventModal()`;
+    const safeLink = sanitizeUrl(b.link);
+    const clickAction = (safeLink && safeLink !== '#') ? `window.location.href='${encodeURI(safeLink)}'` : `openEventModal()`;
 
-    slide.innerHTML = `<img src="${imgUrl}" alt="${b.title || `Banner ${idx + 1}`}" onclick="${clickAction}" style="cursor: pointer;" onerror="this.src='images/banners/1791115595.jpg'">`;
+    slide.innerHTML = `<img src="${encodeURI(imgUrl)}" alt="${escapeText(b.title || `Banner ${idx + 1}`)}" onclick="${clickAction}" style="cursor: pointer;" onerror="this.src='images/banners/1791115595.jpg'">`;
     slider.appendChild(slide);
 
     if (dotsContainer) {
@@ -424,26 +435,38 @@ function startSlideTimer() {
 }
 
 // Live Orders Stream Ticker
-function initOrdersStream() {
+async function initOrdersStream() {
   const streamEl = document.getElementById("liveOrdersStream");
   if (!streamEl) return;
 
-  const realOrders = (typeof API !== 'undefined' && API.getOrders) ? API.getOrders() : [];
-  const displayOrders = realOrders.length > 0 
-    ? realOrders.map(o => ({ tag: "অর্ডার সম্পন্ন", item: `${o.product} (${o.package || ''})`, time: "সফল ডেলিভারি" }))
-    : [
-        { tag: "অর্ডার ডেলিভারি", item: "FF Uid 115 Diamonds", time: "সফল" },
-        { tag: "অর্ডার ডেলিভারি", item: "Weekly Lite (BD)", time: "সফল" },
-        { tag: "অর্ডার ডেলিভারি", item: "FF Uid 240 Diamonds", time: "সফল" },
-        { tag: "অর্ডার ডেলিভারি", item: "New Level Up Pass", time: "সফল" }
-      ];
+  let displayOrders = [
+    { tag: "অর্ডার ডেলিভারি", item: "FF Uid 115 Diamonds", time: "সফল", user: "Sa***n K." },
+    { tag: "অর্ডার ডেলিভারি", item: "Weekly Lite (BD)", time: "সফল", user: "Ra***b H." },
+    { tag: "অর্ডার ডেলিভারি", item: "FF Uid 240 Diamonds", time: "সফল", user: "Ta***r H." },
+    { tag: "অর্ডার ডেলিভারি", item: "Level Up Pass", time: "সফল", user: "Sh***o A." }
+  ];
+
+  try {
+    const res = await fetch("/api/public?type=orders");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.orders && data.orders.length > 0) {
+        displayOrders = data.orders.map(o => ({
+          tag: "অর্ডার সম্পন্ন",
+          item: `${o.product || 'Topup'} ${o.package ? '(' + o.package + ')' : ''}`,
+          time: "সফল ডেলিভারি",
+          user: o.user || "গ্রাহক"
+        }));
+      }
+    }
+  } catch (e) {}
 
   let orderIndex = 0;
   function updateOrder() {
     streamEl.style.opacity = "0";
     setTimeout(() => {
       const ord = displayOrders[orderIndex % displayOrders.length];
-      streamEl.innerHTML = `<span>⚡ ${ord.tag}:</span> <strong>${ord.item}</strong> • <small style="color: #34d399;">${ord.time}</small>`;
+      streamEl.innerHTML = `<span>⚡ ${escapeText(ord.tag)}:</span> <strong>${escapeText(ord.item)}</strong> (${escapeText(ord.user)}) • <small style="color: #34d399;">${escapeText(ord.time)}</small>`;
       streamEl.style.opacity = "1";
       orderIndex++;
     }, 250);
@@ -465,10 +488,11 @@ async function initNoticeModal() {
     const msgEl = document.getElementById("noticeModalMessage");
     const linkBtn = document.getElementById("noticeModalBtn");
     if (msgEl && notice.home_page_notice_message) {
-      msgEl.innerHTML = notice.home_page_notice_message;
+      // Remove potentially malicious script tags from notice message
+      msgEl.innerHTML = String(notice.home_page_notice_message).replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     }
     if (linkBtn && notice.home_page_notice_button_link) {
-      linkBtn.href = notice.home_page_notice_button_link;
+      linkBtn.href = sanitizeUrl(notice.home_page_notice_button_link);
       linkBtn.textContent = notice.home_page_notice_button_text || "অফার দেখুন";
     }
     setTimeout(() => {

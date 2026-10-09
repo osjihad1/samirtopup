@@ -8,6 +8,7 @@ const {
   createSessionToken, 
   verifySessionToken, 
   verifyCaptcha,
+  verifyTurnstileToken,
   setSessionCookie,
   clearUserCookie,
   verifyUserRequest,
@@ -85,15 +86,18 @@ module.exports = async function handler(req, res) {
   // ==========================================
   if (req.method === 'POST' && action === 'register') {
     const data = await parseBody(req);
-    const { name, phone, email, password, captchaAnswer, captchaToken } = data;
+    const { name, phone, email, password, captchaAnswer, captchaToken, turnstileToken } = data;
     if (!(await hitLimit('reg:' + clientIp(req), 10, 60 * 60 * 1000))) return res.status(429).json({ error: 'অনেকবার চেষ্টা করা হয়েছে। পরে আবার চেষ্টা করুন।' });
 
-    // A. Captcha Verification
-    if (!captchaAnswer || !captchaToken) {
-      return res.status(400).json({ error: 'ক্যাপচা ভেরিফিকেশন কোড পূরণ করুন! (Captcha is required)' });
+    // A. Captcha Verification (Cloudflare Turnstile or Math Captcha fallback)
+    let isCaptchaValid = false;
+    if (turnstileToken) {
+      isCaptchaValid = await verifyTurnstileToken(turnstileToken, clientIp(req));
+    } else if (captchaAnswer && captchaToken) {
+      isCaptchaValid = verifyCaptcha(captchaAnswer, captchaToken);
     }
-    if (!verifyCaptcha(captchaAnswer, captchaToken)) {
-      return res.status(400).json({ error: 'ভুল ক্যাপচা অথবা সময় উত্তীর্ণ হয়েছে! পুনরায় ক্যাপচা পূরণ করুন। (Invalid or expired captcha)' });
+    if (!isCaptchaValid) {
+      return res.status(400).json({ error: 'ক্যাপচা ভেরিফিকেশন ব্যর্থ হয়েছে! অনুগ্রহ করে পুনরায় চেষ্টা করুন।' });
     }
 
     // B. Server-Side Data Validation
@@ -181,7 +185,7 @@ module.exports = async function handler(req, res) {
   // ==========================================
   if (req.method === 'POST') {
     const data = await parseBody(req);
-    const { identifier, password, captchaAnswer, captchaToken } = data;
+    const { identifier, password, captchaAnswer, captchaToken, turnstileToken } = data;
     if (typeof identifier !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'অবৈধ তথ্য' });
     if (!(await hitLimit('login:' + clientIp(req) + ':' + identifier.toLowerCase(), 8, 15 * 60 * 1000)) || !(await hitLimit('loginip:' + clientIp(req), 40, 15 * 60 * 1000))) return res.status(429).json({ error: 'অতিরিক্ত ভুল চেষ্টা! ১৫ মিনিট পরে আবার চেষ্টা করুন।' });
 
@@ -189,9 +193,15 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'মোবাইল/ইমেইল এবং পাসওয়ার্ড আবশ্যক' });
     }
 
-    // Mandatory Captcha Check on Login
-    if (!captchaAnswer || !captchaToken || !verifyCaptcha(captchaAnswer, captchaToken)) {
-      return res.status(400).json({ error: 'ভুল ক্যাপচা উত্তর! অনুগ্রহ করে সঠিক ক্যাপচাটি পূরণ করুন।' });
+    // Mandatory Captcha Check on Login (Cloudflare Turnstile or Math Captcha)
+    let isCaptchaValid = false;
+    if (turnstileToken) {
+      isCaptchaValid = await verifyTurnstileToken(turnstileToken, clientIp(req));
+    } else if (captchaAnswer && captchaToken) {
+      isCaptchaValid = verifyCaptcha(captchaAnswer, captchaToken);
+    }
+    if (!isCaptchaValid) {
+      return res.status(400).json({ error: 'ভুল ক্যাপচা উত্তর বা টোকেন! অনুগ্রহ করে সঠিক ক্যাপচাটি পূরণ করুন।' });
     }
 
     const cleanId = identifier.trim();

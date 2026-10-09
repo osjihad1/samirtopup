@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "description": "Samir Topup - Fast & Reliable Game Topup Platform in Bangladesh",
   "scripts": {
-    "dev": "node dev-server.js"
+    "dev": "node dev-server.js",
+    "test": "node tests/security.test.js",
+    "build:catalog": "node scripts/build-catalog.js"
   },
   "dependencies": {
     "mongodb": "^6.8.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^9.1.6"
   }
 }

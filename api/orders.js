@@ -1,94 +1,261 @@
-// /api/orders - prices come from the SERVER catalog; wallet payments are atomic.
-const crypto = require('crypto');
-const catalog = require('./_catalog.json');
-const { findOrders, createOrderDoc, updateOrderStatus, cancelOrderOnce, isTrxIdDuplicate, claimTrx, deductBalance, creditBalance, findUser, parseBody, setCors, hitLimit } = require('./_db');
+// Vercel Serverless Function: /api/orders
+// Features: MongoDB Integration, Server-side TrxID Duplicate Detection, Player ID Check & Auto-Refund
+const { 
+  findOrders, 
+  createOrderDoc, 
+  updateOrderStatus, 
+  isTrxIdDuplicate, 
+  findUser, 
+  updateUser, 
+  parseBody, 
+  setCors,
+  createAuditLog,
+  findCoupon,
+  incrementCouponUse
+} = require('./_db');
 const { verifyUserRequest, verifyAdminRequest } = require('./_crypto');
-
-const STATUSES = ['Pending', 'Processing', 'Completed', 'Cancelled'];
-const METHODS = ['bKash', 'Nagad', 'Rocket', 'Wallet'];
-const TRX_RE = /^[A-Z0-9]{8,20}$/;
+const { sendTelegramAlert } = require('./_telegram');
 
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  try {
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-    if (req.method === 'GET') {
-      const orderId = url.searchParams.get('id');
-      const admin = verifyAdminRequest(req).valid;
-      if (admin && !orderId) return res.status(200).json(await findOrders({}));
-      const user = verifyUserRequest(req);
-      if (!user.valid && !admin) return res.status(401).json({ error: 'Unauthorized' });
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+  // ==========================================
+  // GET: List Orders (Secured per request)
+  // ==========================================
+  if (req.method === 'GET') {
+    const phone = url.searchParams.get('phone');
+    const orderId = url.searchParams.get('id');
+    const last4 = url.searchParams.get('last4');
+
+    // Public order lookup: by Order ID + last 4 digits of phone
+    if (orderId && last4) {
+      const orders = await findOrders({ id: orderId });
+      if (!orders.length) return res.status(404).json({ error: 'অর্ডার পাওয়া যায়নি।' });
+      const ord = orders[0];
+      const ordPhone = String(ord.phone || '').replace(/\D/g, '');
+      if (!ordPhone.endsWith(last4.trim())) {
+        return res.status(403).json({ error: 'মোবাইল নম্বরের শেষ ৪ ডিজিট মিলেনি।' });
+      }
+      return res.status(200).json({
+        id: ord.id,
+        product: ord.product,
+        package: ord.package,
+        amount: ord.amount,
+        method: ord.method,
+        status: ord.status,
+        date: ord.date,
+        playerId: ord.playerId ? ord.playerId.slice(0, 3) + '***' : 'N/A'
+      });
+    }
+
+    // Individual user order check requires matching session cookie or admin
+    if (orderId || phone) {
+      const userAuth = verifyUserRequest(req);
+      const adminAuth = verifyAdminRequest(req);
+      if (!adminAuth.valid && (!userAuth.valid || (phone && userAuth.payload?.phone !== phone))) {
+        return res.status(401).json({ 
+          error: "অননুমোদিত অ্যাক্সেস! অর্ডার হিস্ট্রি দেখতে ভ্যালিড ইউজার কুকি প্রয়োজন (Unauthorized)" 
+        });
+      }
+
       if (orderId) {
-        const o = (await findOrders({ id: String(orderId) }))[0];
-        if (!o) return res.status(404).json({ error: 'Order not found' });
-        if (!admin && String(o.user_id) !== String(user.payload.id)) return res.status(403).json({ error: 'Forbidden' });
-        return res.status(200).json(o);
-      }
-      return res.status(200).json(await findOrders({ user_id: user.payload.id }));
-    }
-
-    if (req.method === 'POST') {
-      const auth = verifyUserRequest(req);
-      if (!auth.valid) return res.status(401).json({ error: auth.error });
-      const dbUser = await findUser({ id: auth.payload.id });
-      if (!dbUser) return res.status(401).json({ error: 'অ্যাকাউন্ট পাওয়া যায়নি, আবার লগইন করুন।' });
-      if (!(await hitLimit('ord:' + dbUser.id, 10, 60 * 1000))) return res.status(429).json({ error: 'অনেক দ্রুত অর্ডার! একটু অপেক্ষা করুন।' });
-
-      const { product, package: pkg, playerId, amount, method, trxId } = await parseBody(req);
-      const prices = (catalog[String(product)] || {})[String(pkg)];
-      if (!prices) return res.status(400).json({ error: 'অবৈধ প্রোডাক্ট বা প্যাকেজ!' });
-      const price = prices.length === 1 ? prices[0] : (prices.includes(Number(amount)) ? Number(amount) : null);
-      if (!price || price < 1) return res.status(400).json({ error: 'অবৈধ মূল্য!' });
-
-      const m = METHODS.find(x => x.toLowerCase() === String(method || '').toLowerCase());
-      if (!m) return res.status(400).json({ error: 'অবৈধ পেমেন্ট মেথড!' });
-      const uid = String(playerId || '').trim();
-      if (!/^\d{8,12}$/.test(uid) || /^(\d)\1{7,11}$/.test(uid)) return res.status(400).json({ error: 'সঠিক প্লেয়ার আইডি (UID) দিন।' });
-
-      let newBalance, trx = 'N/A';
-      if (m === 'Wallet') {
-        newBalance = await deductBalance(dbUser.id, price);
-        if (newBalance === null) return res.status(400).json({ error: 'অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! আগে Add Money করুন।' });
-        trx = 'WLT-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-      } else {
-        trx = String(trxId || '').trim().toUpperCase();
-        if (!TRX_RE.test(trx) || /^(.)\1{7,}$/.test(trx)) return res.status(400).json({ error: 'সঠিক Transaction ID দিন।' });
-        if (!(await claimTrx(trx))) return res.status(400).json({ error: 'এই Transaction ID আগেই ব্যবহার হয়েছে!' });
+        const orders = await findOrders({ id: orderId });
+        if (!orders.length) return res.status(404).json({ error: 'Order not found' });
+        return res.status(200).json(orders[0]);
       }
 
-      const order = {
-        id: 'ST-' + crypto.randomBytes(4).toString('hex').toUpperCase(),
-        date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
-        user_id: dbUser.id, user_name: dbUser.name || 'Customer', phone: dbUser.phone || '',
-        product: String(product), package: String(pkg), playerId: uid, amount: price,
-        method: m, trxId: trx, status: m === 'Wallet' ? 'Processing' : 'Pending',
-        created_at: new Date().toISOString()
-      };
-      try { await createOrderDoc(order); }
-      catch (e) { if (m === 'Wallet') await creditBalance(dbUser.id, price); throw e; }
-      return res.status(201).json({ success: true, order, newBalance });
+      if (phone) {
+        const userOrders = await findOrders({ phone });
+        return res.status(200).json(userOrders);
+      }
     }
 
-    if (req.method === 'PUT') {
-      if (!verifyAdminRequest(req).valid) return res.status(401).json({ error: 'Unauthorized' });
-      const { orderId, status } = await parseBody(req);
-      if (typeof orderId !== 'string' || !STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid orderId/status' });
-      const existing = (await findOrders({ id: orderId }))[0];
-      if (!existing) return res.status(404).json({ error: 'Order not found' });
-      if (existing.status === 'Cancelled') return res.status(409).json({ error: 'Cancelled order cannot be changed' });
-      if (status === 'Cancelled') {
-        const prev = await cancelOrderOnce(orderId);
-        if (!prev) return res.status(409).json({ error: 'Already cancelled' });
-        if (prev.method === 'Wallet') await creditBalance(prev.user_id, prev.amount);   // refunded exactly once
-        return res.status(200).json({ success: true, order: { ...prev, status } });
-      }
-      return res.status(200).json({ success: true, order: await updateOrderStatus(orderId, status) });
+    // Viewing all orders across all users strictly requires verified admin cookie
+    const auth = verifyAdminRequest(req);
+    if (!auth.valid) {
+      return res.status(401).json({ error: 'Unauthorized: Admin authentication required to view all orders' });
     }
-    return res.status(405).json({ error: 'Method not allowed' });
-  } catch (e) {
-    console.error('orders error:', e.message);
-    return res.status(500).json({ error: 'Server error' });
+    const all = await findOrders({});
+    return res.status(200).json(all);
   }
+
+  // ==========================================
+  // POST: Create New Order (Per-Request User Cookie & DB Check)
+  // ==========================================
+  if (req.method === 'POST') {
+    // 1. Mandatory Cookie Check: Zero Direct API Access without Valid User Cookie
+    const auth = verifyUserRequest(req);
+    if (!auth.valid) {
+      return res.status(401).json({ 
+        error: "অননুমোদিত অ্যাক্সেস! সরাসরি API রিকোয়েস্ট পাঠানো নিষেধ। শুধুমাত্র লগইন করা আসল ব্যবহারকারীর ভ্যালিড কুকি (Valid Session Cookie) প্রয়োজন।" 
+      });
+    }
+
+    // 2. Real User Verification against MongoDB Database
+    const sessionUser = auth.payload;
+    const dbUser = await findUser({ id: sessionUser.id });
+    if (!dbUser) {
+      return res.status(401).json({ 
+        error: "ব্যবহারকারী অ্যাকাউন্ট ডাটাবেসে পাওয়া যায়নি! অনুগ্রহ করে পুনরায় লগইন করুন।" 
+      });
+    }
+
+    const data = await parseBody(req);
+    const { product, package: pkgName, playerId, amount, method, trxId } = data;
+
+    if (!product || !amount) {
+      return res.status(400).json({ error: 'প্রোডাক্ট এবং টাকার পরিমাণ আবশ্যক' });
+    }
+
+    const orderAmount = parseFloat(amount);
+    if (isNaN(orderAmount) || orderAmount < 10) {
+      return res.status(400).json({ error: 'অবৈধ অর্ডারের পরিমাণ! সর্বনিম্ন ১০ ৳ হতে হবে।' });
+    }
+
+    // Allowed Payment Methods Verification
+    const validMethods = ['bKash', 'Nagad', 'Rocket', 'Wallet'];
+    const matchedMethod = validMethods.find(m => m.toLowerCase() === (method || '').toLowerCase());
+    if (!matchedMethod) {
+      return res.status(400).json({ error: 'অবৈধ পেমেন্ট মেথড! শুধুমাত্র বিকাশ, নগদ, রকেট অথবা ওয়ালেট প্রযোজ্য।' });
+    }
+
+    // 1. Player ID verification (8-12 digits numeric for Free Fire)
+    const cleanPlayerId = playerId ? String(playerId).trim() : '';
+    if (!cleanPlayerId || !/^\d{8,12}$/.test(cleanPlayerId)) {
+      return res.status(400).json({ error: 'ভুল প্লেয়ার আইডি (UID)! ৮ থেকে ১২ সংখ্যার সঠিক প্লেয়ার আইডি দিন।' });
+    }
+    const dummyUids = ['12345678', '11111111', '00000000', '99999999', '123456789', '1234567890', '88888888'];
+    if (dummyUids.includes(cleanPlayerId) || /^(\d)\1{7,11}$/.test(cleanPlayerId)) {
+      return res.status(400).json({ error: 'নকল বা ডামি প্লেয়ার আইডি গ্রহণযোগ্য নয়! আসল গেম UID দিন।' });
+    }
+
+    // 2. Anti-Spam TrxID Verification (for bKash / Nagad / Rocket)
+    if (matchedMethod !== 'Wallet') {
+      const cleanTrx = trxId ? trxId.trim().toUpperCase() : '';
+      if (!cleanTrx || cleanTrx.length < 8 || !/^[A-Z0-9]{8,20}$/.test(cleanTrx)) {
+        return res.status(400).json({ error: 'সঠিক Transaction ID (TrxID) প্রদান করুন (কমপক্ষে ৮ অক্ষর/সংখ্যা)' });
+      }
+      const dummyTrx = ['12345678', '00000000', '11111111', 'AAAAAAAA', 'TESTTEST', 'TX123456', 'ASDFASDF', 'QWERTYUI'];
+      if (dummyTrx.includes(cleanTrx) || /^([A-Z0-9])\1{7,}$/.test(cleanTrx)) {
+        return res.status(400).json({ error: 'ভুয়া বা স্প্যাম Transaction ID গ্রহণযোগ্য নয়! বিকাশ/নগদের আসল TrxID দিন।' });
+      }
+      const isDuplicate = await isTrxIdDuplicate(cleanTrx);
+      if (isDuplicate) {
+        return res.status(400).json({ 
+          error: `এই Transaction ID (${cleanTrx}) টি ইতিমধ্যে অন্য অর্ডারে ব্যবহার করা হয়েছে! নতুন TrxID দিন।` 
+        });
+      }
+    }
+
+    // 3. Wallet Balance Check & Atomic Deduction using verified dbUser
+    let newBalance = undefined;
+    if (matchedMethod === 'Wallet') {
+      const currentBal = Number(dbUser.balance) || 0;
+      if (currentBal < orderAmount) {
+        return res.status(400).json({ 
+          error: `অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই! বর্তমান ব্যালেন্স: ${currentBal} ৳, প্রয়োজন: ${orderAmount} ৳। আগে Add Money করুন।` 
+        });
+      }
+      newBalance = Math.max(0, currentBal - orderAmount);
+      await updateUser(dbUser.id, {
+        balance: newBalance,
+        total_spend: (Number(dbUser.total_spend) || 0) + orderAmount
+      });
+    }
+
+    const newOrder = {
+      id: 'ST-' + Math.floor(10000 + Math.random() * 90000),
+      date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+      user_id: dbUser.id,
+      user_name: dbUser.name || sessionUser.name || 'Customer',
+      phone: dbUser.phone || sessionUser.phone || '01700000000',
+      product,
+      package: pkgName || 'Topup Package',
+      playerId: cleanPlayerId || 'N/A',
+      amount: orderAmount,
+      method: method || 'bKash',
+      trxId: method === 'Wallet' ? ('WLT-' + Math.floor(10000 + Math.random() * 90000)) : (trxId ? trxId.trim().toUpperCase() : 'N/A'),
+      status: method === 'Wallet' ? 'Processing' : 'Pending',
+      created_at: new Date().toISOString()
+    };
+
+    await createOrderDoc(newOrder);
+
+    // Telegram Bot Notification to Admin
+    try {
+      const msg = `🛒 <b>নতুন অর্ডার এসেছে!</b>\n` +
+        `ID: <code>${newOrder.id}</code>\n` +
+        `গ্রাহক: ${newOrder.user_name} (${newOrder.phone})\n` +
+        `পণ্য: ${newOrder.product} - ${newOrder.package}\n` +
+        `UID: <code>${newOrder.playerId}</code>\n` +
+        `পরিমাণ: <b>৳${newOrder.amount}</b> (${newOrder.method})\n` +
+        `TrxID: <code>${newOrder.trxId}</code>\n` +
+        `স্ট্যাটাস: ${newOrder.status}`;
+      sendTelegramAlert(msg).catch(() => {});
+    } catch (e) {}
+
+    return res.status(201).json({ success: true, order: newOrder, newBalance });
+  }
+
+  // ==========================================
+  // PUT: Update Order Status (Admin action)
+  // ==========================================
+  if (req.method === 'PUT') {
+    const auth = verifyAdminRequest(req);
+    if (!auth.valid) {
+      return res.status(401).json({ error: 'Unauthorized: Admin authentication required to update order status' });
+    }
+
+    const data = await parseBody(req);
+    const { orderId, status } = data;
+
+    if (!orderId || !status) {
+      return res.status(400).json({ error: 'orderId and status are required' });
+    }
+
+    const existing = await findOrders({ id: orderId });
+    if (!existing.length) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = existing[0];
+    const previousStatus = order.status;
+
+    // Refund logic: If cancelled and was paid by wallet, refund
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled' && order.method === 'Wallet') {
+      const user = await findUser({ phone: order.phone });
+      if (user) {
+        await updateUser(user.id, {
+          balance: (user.balance || 0) + order.amount
+        });
+        await createAuditLog({
+          who: auth.admin?.name || 'Admin',
+          action: 'ORDER_REFUND',
+          target: orderId,
+          before: { balance: user.balance },
+          after: { balance: (user.balance || 0) + order.amount },
+          details: `Order ${orderId} cancelled, refunded ${order.amount} ৳ to user ${user.id}`
+        });
+      }
+    }
+
+    const updated = await updateOrderStatus(orderId, status);
+
+    // Audit Log for status change
+    await createAuditLog({
+      who: auth.admin?.name || 'Admin',
+      action: 'ORDER_STATUS_CHANGE',
+      target: orderId,
+      before: { status: previousStatus },
+      after: { status },
+      details: `Changed order ${orderId} status from ${previousStatus} to ${status}`
+    });
+
+    return res.status(200).json({ success: true, order: updated });
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
 };

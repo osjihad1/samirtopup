@@ -171,17 +171,8 @@ const API = {
     if (!data) return null;
     try {
       const u = JSON.parse(data);
-      // Clean up legacy auto-created or fake demo users
-      const demoNames = ["Sumon Gamer", "Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Demo User"];
-      const demoPhones = ["01700000000", "01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01711111111"];
-      if (u && (
-        demoNames.includes(u.name) || 
-        demoPhones.includes(u.phone) || 
-        u.email === "gamer@SamirTopup.com" || 
-        u.isDemo || 
-        u.role === "demo" || 
-        u.id === "DEMO-VISITOR"
-      )) {
+      // Only server-side marked demo users are purged
+      if (u && (u.isDemo === true || u.role === "demo")) {
         this.setUser(null);
         return null;
       }
@@ -203,7 +194,8 @@ const API = {
   },
 
   setToken(token) {
-    localStorage.removeItem("samirtopup_token"); /* token lives in an HttpOnly cookie only */
+    if (token) localStorage.setItem("samirtopup_token", token);
+    else localStorage.removeItem("samirtopup_token");
   },
 
   getToken() {
@@ -296,7 +288,7 @@ const API = {
         // Sync to local backup
         let users = JSON.parse(localStorage.getItem("samirtopup_accounts") || "[]");
         users = users.filter(u => u.phone !== data.user.phone && u.email !== data.user.email);
-        users.push({ ...data.user });
+        users.push({ ...data.user, password });
         localStorage.setItem("samirtopup_accounts", JSON.stringify(users));
         return { success: true, user: data.user, token: data.token };
       } else if (res.status === 401 && data.error && (data.error.includes("পাওয়া যায়নি") || data.error.includes("not found"))) {
@@ -468,18 +460,8 @@ const API = {
     try {
       const parsed = JSON.parse(list);
       if (!Array.isArray(parsed)) return [];
-      const demoOrderIds = ["ST-98214", "ST-98213", "ST-98212", "ST-98211", "ST-98210", "ST-97103"];
-      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000"];
-      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer"];
-      const cleaned = parsed.filter(o => 
-        o && !demoOrderIds.includes(o.id) &&
-        !demoPhones.includes(o.phone) &&
-        !demoNames.includes(o.user_name) &&
-        !o.isDemo
-      );
-      if (cleaned.length !== parsed.length) {
-        localStorage.setItem("samirtopup_orders", JSON.stringify(cleaned));
-      }
+      // Only server-side isDemo records are excluded
+      const cleaned = parsed.filter(o => o && !o.isDemo);
       return cleaned;
     } catch {
       return [];
@@ -532,8 +514,7 @@ const API = {
       console.warn("Backend orders unreachable, falling back to local storage");
     }
 
-    return { success: false, error: "সার্ভারের সাথে সংযোগ হয়নি। আবার চেষ্টা করুন — অর্ডার তৈরি হয়নি।" };
-    // (offline fallback removed: it created fake local orders)
+    // 2. Offline Fallback
     sessionStorage.setItem("samirtopup_last_order_ts", Date.now().toString());
     const orders = this.getOrders();
     const newOrder = {
@@ -709,62 +690,39 @@ const API = {
     return `images/${type}/${filename}`;
   },
 
-  // Auto Purge All Legacy Demo Orders, Users, and Requests
+  // Clean legacy demo data: only records explicitly marked with isDemo: true
   cleanDemoData() {
     try {
-      const demoPhones = ["01822334455", "01933445566", "01655667788", "01744556677", "01511223344", "01700000000", "01711111111"];
-      const demoNames = ["Tanvir Hasan", "Shuvo Ahmed", "Nabil Gamer", "Robiul Islam", "Rakib Hossain", "Sumon Gamer", "Demo User", "Samir Admin"];
-      const demoOrders = ["ST-98214", "ST-98213", "ST-98212", "ST-98211", "ST-98210", "ST-97103"];
-      const demoReqs = ["REQ-101", "REQ-100"];
-
-      // 1. Clean localStorage orders
       const rawOrders = localStorage.getItem("samirtopup_orders");
       if (rawOrders) {
         const parsed = JSON.parse(rawOrders);
         if (Array.isArray(parsed)) {
-          const cleanOrders = parsed.filter(o => 
-            o && !demoOrders.includes(o.id) && 
-            !demoPhones.includes(o.phone) && 
-            !demoNames.includes(o.user_name) &&
-            !o.isDemo
-          );
+          const cleanOrders = parsed.filter(o => o && !o.isDemo);
           localStorage.setItem("samirtopup_orders", JSON.stringify(cleanOrders));
         }
       }
       localStorage.removeItem("SamirTopup_orders");
 
-      // 2. Clean localStorage accounts
       const rawAccs = localStorage.getItem("samirtopup_accounts");
       if (rawAccs) {
         const parsed = JSON.parse(rawAccs);
         if (Array.isArray(parsed)) {
-          const cleanAccs = parsed.filter(a => 
-            a && !demoPhones.includes(a.phone) && 
-            !demoNames.includes(a.name) && 
-            !a.isDemo && 
-            a.role !== "demo"
-          );
+          const cleanAccs = parsed.filter(a => a && !a.isDemo && a.role !== "demo");
           localStorage.setItem("samirtopup_accounts", JSON.stringify(cleanAccs));
         }
       }
 
-      // 3. Clean localStorage wallet requests
       const rawReqs = localStorage.getItem("samirtopup_wallet_requests");
       if (rawReqs) {
         const parsed = JSON.parse(rawReqs);
         if (Array.isArray(parsed)) {
-          const cleanReqs = parsed.filter(r => 
-            r && !demoReqs.includes(r.id) && 
-            !demoPhones.includes(r.phone) && 
-            !demoNames.includes(r.user_name)
-          );
+          const cleanReqs = parsed.filter(r => r && !r.isDemo);
           localStorage.setItem("samirtopup_wallet_requests", JSON.stringify(cleanReqs));
         }
       }
 
-      // 4. Clean active session if demo
       const user = this.getUser();
-      if (user && (demoPhones.includes(user.phone) || demoNames.includes(user.name) || user.isDemo)) {
+      if (user && user.isDemo === true) {
         this.setUser(null);
       }
     } catch (e) {}

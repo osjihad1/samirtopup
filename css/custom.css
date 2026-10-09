@@ -1,4 +1,4 @@
-/* SAMIR TOPUP Ultra-Smooth Styles & Animations */
+﻿/* SAMIR TOPUP Ultra-Smooth Styles & Animations */
 :root {
   --site-color: #042d49;
   --primary-color: #042d49;
@@ -1973,7 +1973,7 @@ img {
 }
 
 /* ============================================================
-   📱 COMPREHENSIVE RESPONSIVE OPTIMIZATIONS (Smartphones & Tablets)
+   ðŸ“± COMPREHENSIVE RESPONSIVE OPTIMIZATIONS (Smartphones & Tablets)
    ============================================================ */
 
 /* Tablets and Medium Screens: 769px to 1080px */
@@ -2382,6 +2382,8 @@ img {
     padding: 12px 14px !important;
   }
 }
-
-
+/* Skeleton Loading */
+.skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; border-radius: 8px; }
+@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skeleton-card { height: 160px; border-radius: 12px; }
 
