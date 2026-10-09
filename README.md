@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🎮 SAMIR TOPUP - Full Stack Gaming Top-up Platform
 
 > **100% Offline Asset Ready | Vercel Serverless Backend Ready | Complete Admin Control Center**
@@ -199,4 +200,6 @@ Samir Topup features a dual-engine database layer:
 
 ---
 © 2026 **SAMIR TOPUP**. All Rights Reserved.
+=======
+>>>>>>> ddf38c5e7eecf4250307856014768fd8c7fe5614
 
