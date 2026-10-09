@@ -33,6 +33,7 @@ let cachedDb = null;
 // 1. MongoDB Connection Manager (Serverless Optimized)
 // ==========================================
 async function connectMongo() {
+  if (process.env.SAMIR_DISABLE_MONGO === '1') return null;
   if (!MONGODB_URI) return null;
   if (cachedDb) return cachedDb;
 
@@ -349,30 +350,61 @@ async function getSettingsData() {
 }
 
 async function saveSettingsData(settings) {
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    throw new Error('settings must be an object');
+  }
+  const patch = {};
+  for (const [k, v] of Object.entries(settings)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    if (k.startsWith('$')) continue;
+    patch[k] = v;
+  }
+
+  const existingRaw = await getSettingsData();
+  const existing = (existingRaw && typeof existingRaw === 'object' && !Array.isArray(existingRaw))
+    ? { ...existingRaw }
+    : {};
+  delete existing._id;
+  delete existing.updated_at;
+  delete existing.data;
+  const merged = { ...existing, ...patch };
+
   const db = await connectMongo();
   if (db) {
     await db.collection('settings').updateOne(
       { _id: 'global_settings' },
-      { $set: { data: settings, updated_at: new Date() } },
+      { $set: { data: merged, updated_at: new Date() } },
       { upsert: true }
     );
   }
   const local = getDb();
-  local.settings = { ...local.settings, ...settings };
+  local.settings = merged;
   saveDb(local);
-  return local.settings;
+  return merged;
 }
 
-async function getBannersData() {
+async function getBannersState() {
   const db = await connectMongo();
   if (db) {
     const doc = await db.collection('settings').findOne({ _id: 'global_banners' });
-    if (doc && doc.banners) return doc.banners;
+    if (doc) {
+      return { banners: Array.isArray(doc.banners) ? doc.banners : [], configured: true };
+    }
   }
-  return getDb().banners || [];
+  const local = getDb();
+  return {
+    banners: Array.isArray(local.banners) ? local.banners : [],
+    configured: local._bannersConfigured === true
+  };
+}
+
+async function getBannersData() {
+  const state = await getBannersState();
+  return state.banners;
 }
 
 async function saveBannersData(banners) {
+  if (!Array.isArray(banners)) throw new Error('banners must be an array');
   const db = await connectMongo();
   if (db) {
     await db.collection('settings').updateOne(
@@ -383,6 +415,7 @@ async function saveBannersData(banners) {
   }
   const local = getDb();
   local.banners = banners;
+  local._bannersConfigured = true;
   saveDb(local);
   return banners;
 }
@@ -477,6 +510,28 @@ function setCors(res, req) {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
+function resetLocalDb(seed) {
+  memoryStore = seed || {
+    notice: { title: 'Notice', message: 'Welcome', ticker: 'Welcome to Samir Topup', active: true },
+    users: [],
+    orders: [],
+    wallet_requests: [],
+    settings: {},
+    banners: [],
+    audit_logs: [],
+    coupons: [],
+    _bannersConfigured: false
+  };
+  try {
+    fs.writeFileSync(TMP_PATH, JSON.stringify(memoryStore, null, 2), 'utf8');
+  } catch (e) {}
+  return memoryStore;
+}
+
 // --- IN-MEMORY RATE LIMIT HELPER ---
 const rateLimits = new Map();
 async function hitLimit(key, maxHits = 10, windowMs = 60000) {
@@ -522,15 +577,29 @@ async function createAuditLog({ who, action, target, before, after, details }) {
   return log;
 }
 
-async function findAuditLogs(limit = 100) {
+async function findAuditLogs(limit = 100, filter = {}) {
+  const cap = Math.min(Math.max(Number(limit) || 100, 1), 500);
+  let rows = [];
   const db = await connectMongo();
   if (db) {
     try {
-      return await db.collection('audit_logs').find({}).sort({ _id: -1 }).limit(limit).toArray();
+      rows = await db.collection('audit_logs').find({}).sort({ _id: -1 }).limit(500).toArray();
     } catch (e) {}
   }
-  const local = getDb();
-  return (local.audit_logs || []).slice(0, limit);
+  if (!rows.length) {
+    const local = getDb();
+    rows = (local.audit_logs || []).slice();
+  }
+  if (filter && filter.action) {
+    rows = rows.filter(r => r.action === filter.action);
+  }
+  if (filter && filter.q) {
+    const q = String(filter.q).toLowerCase();
+    rows = rows.filter(r => JSON.stringify({
+      who: r.who, action: r.action, target: r.target, details: r.details, before: r.before, after: r.after
+    }).toLowerCase().includes(q));
+  }
+  return rows.slice(0, cap);
 }
 
 // --- COUPONS & FLASH SALE ---
@@ -633,6 +702,94 @@ async function getPublicLeaderboard(limit = 10) {
   });
 }
 
+async function adjustBalanceAtomic(userId, delta, extraSet = {}, options = {}) {
+  const deltaNum = Math.round(Number(delta) * 100) / 100;
+  if (!Number.isFinite(deltaNum) || deltaNum === 0) {
+    return { ok: false, error: 'invalid amount' };
+  }
+  const cleanExtra = {};
+  if (extraSet && typeof extraSet === 'object') {
+    for (const [k, v] of Object.entries(extraSet)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype' || k === 'balance') continue;
+      cleanExtra[k] = v;
+    }
+  }
+  const db = await connectMongo();
+  if (db) {
+    const filter = { $or: [{ id: Number(userId) }, { id: String(userId) }] };
+    if (deltaNum < 0) filter.balance = { $gte: Math.abs(deltaNum) - 0.001 };
+    const update = { $inc: { balance: deltaNum } };
+    if (options.spend && deltaNum < 0) update.$inc.total_spend = Math.abs(deltaNum);
+    if (Object.keys(cleanExtra).length) update.$set = cleanExtra;
+    const res = await db.collection('users').findOneAndUpdate(filter, update, { returnDocument: 'after' });
+    const doc = res && (res.value !== undefined ? res.value : res);
+    if (!doc || doc.balance === undefined || doc.ok === 0) return { ok: false, error: 'insufficient' };
+    return { ok: true, user: doc };
+  }
+  const local = getDb();
+  const user = (local.users || []).find(u => u.id == userId || u._id == userId);
+  if (!user) return { ok: false, error: 'missing' };
+  const bal = Number(user.balance) || 0;
+  if (deltaNum < 0 && bal + 0.001 < Math.abs(deltaNum)) return { ok: false, error: 'insufficient' };
+  user.balance = Math.round((bal + deltaNum) * 100) / 100;
+  if (options.spend && deltaNum < 0) {
+    user.total_spend = Math.round(((Number(user.total_spend) || 0) + Math.abs(deltaNum)) * 100) / 100;
+  }
+  Object.assign(user, cleanExtra);
+  saveDb(local);
+  return { ok: true, user };
+}
+
+async function transitionWalletRequest(reqId, fromStatus, toStatus, extra = {}) {
+  const patch = { ...(extra || {}), status: toStatus, updated_at: new Date().toISOString() };
+  const db = await connectMongo();
+  if (db) {
+    const res = await db.collection('wallet_requests').findOneAndUpdate(
+      { id: reqId, status: fromStatus },
+      { $set: patch },
+      { returnDocument: 'after' }
+    );
+    const doc = res && (res.value !== undefined ? res.value : res);
+    if (!doc || doc.status !== toStatus) return null;
+    return doc;
+  }
+  const local = getDb();
+  const item = (local.wallet_requests || []).find(r => r.id === reqId && r.status === fromStatus);
+  if (!item) return null;
+  Object.assign(item, patch);
+  saveDb(local);
+  return item;
+}
+
+async function getAdminPasswordRecord() {
+  const db = await connectMongo();
+  if (db) {
+    const doc = await db.collection('settings').findOne({ _id: 'admin_auth' });
+    return doc || null;
+  }
+  return getDb().admin_auth || null;
+}
+
+async function saveAdminPasswordRecord(rec) {
+  const safe = {
+    salt: rec.salt,
+    hash: rec.hash,
+    updated_at: new Date().toISOString()
+  };
+  const db = await connectMongo();
+  if (db) {
+    await db.collection('settings').updateOne(
+      { _id: 'admin_auth' },
+      { $set: safe },
+      { upsert: true }
+    );
+  }
+  const local = getDb();
+  local.admin_auth = safe;
+  saveDb(local);
+  return safe;
+}
+
 module.exports = {
   // Database connections & operations
   connectMongo,
@@ -650,6 +807,7 @@ module.exports = {
   getSettingsData,
   saveSettingsData,
   getBannersData,
+  getBannersState,
   saveBannersData,
   purgeDemoData,
   createAuditLog,
@@ -659,6 +817,11 @@ module.exports = {
   getPublicOrders,
   getPublicLeaderboard,
   hitLimit,
+  adjustBalanceAtomic,
+  transitionWalletRequest,
+  getAdminPasswordRecord,
+  saveAdminPasswordRecord,
+  resetLocalDb,
   // Legacy & file helpers
   getDb,
   saveDb,
