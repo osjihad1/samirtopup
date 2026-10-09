@@ -39,15 +39,46 @@ function renderProductInfo(product) {
   const descEl = document.getElementById("productDesc");
   const logoEl = document.getElementById("productLogo");
   const inputLabelEl = document.getElementById("accountInputLabel");
+  const playerIdInput = document.getElementById("playerIdInput");
+  const accountHintText = document.getElementById("accountHintText");
+  const accountStepTitle = document.getElementById("accountStepTitle");
+  const uidVerifyResult = document.getElementById("uidVerifyResult");
 
   if (titleEl) titleEl.textContent = product.name;
-  if (descEl) descEl.innerHTML = product.description || "Enter your player ID correctly to receive fast top-up delivery.";
+  if (descEl) descEl.innerHTML = product.description || "Enter your information correctly to receive fast top-up delivery.";
   if (logoEl) {
     logoEl.src = API.getImageUrl("products", product.logo);
     logoEl.onerror = () => { logoEl.src = "images/products/1763469001.jpg"; };
   }
-  if (inputLabelEl) {
-    inputLabelEl.textContent = product.input_name && product.input_name !== "null" ? product.input_name : "Player ID (UID)";
+
+  const isSocial = /facebook|follower|page|react|social|tiktok|instagram|youtube/i.test(product.name || '');
+
+  if (isSocial) {
+    if (accountStepTitle) accountStepTitle.textContent = "Facebook Link / Profile URL";
+    if (inputLabelEl) inputLabelEl.textContent = "ফেসবুক প্রোফাইল বা পেজ লিংক (Facebook Profile / Page URL)";
+    if (playerIdInput) {
+      playerIdInput.placeholder = "e.g. https://www.facebook.com/yourprofile অথবা পেজ লিংক দিন";
+    }
+    if (accountHintText) {
+      accountHintText.innerHTML = "💡 আপনার ফেসবুক প্রোফাইল বা পেজের লিঙ্কটি কপি করে এখানে পেস্ট করুন।";
+    }
+    if (uidVerifyResult) {
+      uidVerifyResult.style.display = "none";
+    }
+  } else {
+    if (accountStepTitle) accountStepTitle.textContent = "Enter Account Info";
+    if (inputLabelEl) {
+      inputLabelEl.textContent = product.input_name && product.input_name !== "null" ? product.input_name : "Player ID (UID)";
+    }
+    if (playerIdInput) {
+      playerIdInput.placeholder = "এখানে আপনার গেম আইডি (UID) দিন";
+    }
+    if (accountHintText) {
+      accountHintText.innerHTML = "💡 আপনার গেম প্রোফাইলে গিয়ে আইডি কোডটি কপি করে এখানে পেস্ট করুন।";
+    }
+    if (uidVerifyResult) {
+      uidVerifyResult.style.display = "block";
+    }
   }
 }
 
@@ -134,22 +165,30 @@ async function verifyPlayerId() {
   }
 }
 
-function applyCouponCode() {
+async function applyCouponCode() {
   const input = document.getElementById("couponInput");
   if (!input) return;
   const code = input.value.trim().toUpperCase();
 
-  if (code === "TOPUP10") {
-    appliedDiscount = 10;
-    showToast("Coupon applied: 10 ৳ Discount!", "success");
-  } else if (code === "BUZZ5") {
-    appliedDiscount = 5;
-    showToast("Coupon applied: 5 ৳ Discount!", "success");
-  } else if (!code) {
+  if (!code) {
     appliedDiscount = 0;
-  } else {
-    showToast("Invalid or expired coupon code", "error");
+    updateOrderSummary();
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/orders?check_coupon=${encodeURIComponent(code)}`);
+    const data = await res.json();
+    if (data.valid && data.discount) {
+      appliedDiscount = Number(data.discount) || 0;
+      showToast(`কুপন প্রয়োগ হয়েছে: ${appliedDiscount} ৳ ছাড়!`, "success");
+    } else {
+      appliedDiscount = 0;
+      showToast(data.error || "ভুল বা মেয়াদোত্তীর্ণ কুপন কোড!", "error");
+    }
+  } catch (e) {
     appliedDiscount = 0;
+    showToast("ভুল বা মেয়াদোত্তীর্ণ কুপন কোড!", "error");
   }
   updateOrderSummary();
 }
@@ -177,11 +216,26 @@ async function handleCheckout() {
   if (window.playClickSound) window.playClickSound();
   const playerIdInput = document.getElementById("playerIdInput");
   const playerId = playerIdInput ? playerIdInput.value.trim() : "";
+  const isSocial = /facebook|follower|page|react|social|tiktok|instagram|youtube/i.test(currentProduct?.name || '');
 
   if (!playerId) {
-    showToast("অনুগ্রহ করে আপনার প্লেয়ার আইডি (UID) দিন!", "error");
+    showToast(isSocial ? "অনুগ্রহ করে ফেসবুক প্রোফাইল বা পেজ লিংক দিন!" : "অনুগ্রহ করে আপনার প্লেয়ার আইডি (UID) দিন!", "error");
     if (playerIdInput) playerIdInput.focus();
     return;
+  }
+
+  if (isSocial) {
+    if (playerId.length < 4) {
+      showToast("সঠিক ফেসবুক প্রোফাইল বা পেজ লিংক দিন!", "error");
+      if (playerIdInput) playerIdInput.focus();
+      return;
+    }
+  } else {
+    if (playerId.length < 5) {
+      showToast("সঠিক প্লেয়ার আইডি (UID) দিন!", "error");
+      if (playerIdInput) playerIdInput.focus();
+      return;
+    }
   }
 
   if (!selectedPackage) {
@@ -223,11 +277,14 @@ async function openPaymentModal(playerId, amount) {
   const modal = document.getElementById("paymentModal");
   const amtEl = document.getElementById("payModalAmount");
   const uidEl = document.getElementById("payModalUid");
+  const uidLabelEl = document.getElementById("payModalUidLabel");
   const numEl = document.getElementById("payModalNumber");
   const copyBtn = document.getElementById("copyPayNumBtn");
+  const isSocial = /facebook|follower|page|react|social|tiktok|instagram|youtube/i.test(currentProduct?.name || '');
 
   if (amtEl) amtEl.textContent = `৳${amount}`;
   if (uidEl) uidEl.textContent = playerId;
+  if (uidLabelEl) uidLabelEl.textContent = isSocial ? "Facebook Link:" : "Player UID:";
 
   const settings = (API.getSettingsLive ? await API.getSettingsLive() : API.getSettings()) || {};
   if (selectedPaymentMethod === "bkash") {

@@ -113,7 +113,7 @@
         <div class="topup-card">
           <div class="step-header">
             <div class="step-number">2</div>
-            <h2 class="step-title">Enter Account Info</h2>
+            <h2 class="step-title" id="accountStepTitle">Enter Account Info</h2>
           </div>
           <div style="margin-bottom: 12px;">
             <label id="accountInputLabel" style="display: block; font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
@@ -122,7 +122,7 @@
             <input type="text" id="playerIdInput" class="input-field" placeholder="এখানে আপনার গেম আইডি (UID) দিন" value="" autocomplete="off" required>
             <div id="uidVerifyResult" style="margin-top: 8px;"></div>
           </div>
-          <p style="font-size: 12px; color: #64748b;">
+          <p id="accountHintText" style="font-size: 12px; color: #64748b;">
             💡 আপনার গেম প্রোফাইলে গিয়ে আইডি কোডটি কপি করে এখানে পেস্ট করুন।
           </p>
         </div>
@@ -165,14 +165,11 @@
             <h2 class="step-title">Apply Coupon Code (Optional)</h2>
           </div>
           <div style="display: flex; gap: 10px;">
-            <input type="text" id="couponInput" class="input-field" placeholder="Enter coupon (e.g. TOPUP10)">
+            <input type="text" id="couponInput" class="input-field" placeholder="কুপন কোড দিন (যদি থাকে)">
             <button onclick="applyCouponCode()" class="btn-login" style="padding: 0 18px; white-space: nowrap;">
               Apply
             </button>
           </div>
-          <p style="font-size: 12px; color: #10b981; margin-top: 6px;">
-            Promo: Use code <strong>TOPUP10</strong> for 10 ৳ off!
-          </p>
         </div>
 
       </div>
@@ -233,7 +230,7 @@
       <button class="modal-close" onclick="closePaymentModal()">&times;</button>
       <div style="text-align: center; margin-bottom: 18px;">
         <h3 style="font-size: 20px; font-weight: 800; color: #fff;">Complete Payment</h3>
-        <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">Player UID: <strong id="payModalUid" style="color: #38bdf8;"></strong></p>
+        <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;"><span id="payModalUidLabel">Player UID:</span> <strong id="payModalUid" style="color: #38bdf8;"></strong></p>
       </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">

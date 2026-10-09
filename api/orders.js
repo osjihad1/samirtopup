@@ -27,6 +27,20 @@ module.exports = async function handler(req, res) {
   // GET: List Orders (Secured per request)
   // ==========================================
   if (req.method === 'GET') {
+    // Public coupon check
+    const checkCoupon = url.searchParams.get('check_coupon');
+    if (checkCoupon) {
+      const c = await findCoupon(checkCoupon);
+      if (!c || c.active === false || (c.maxUses && (c.usedCount || 0) >= c.maxUses)) {
+        return res.status(200).json({ valid: false, error: 'কুপনটি সঠিক নয় বা এর মেয়াদ শেষ!' });
+      }
+      return res.status(200).json({ 
+        valid: true, 
+        discount: Number(c.discount || c.amount || 0),
+        code: c.code 
+      });
+    }
+
     const phone = url.searchParams.get('phone');
     const orderId = url.searchParams.get('id');
     const last4 = url.searchParams.get('last4');
@@ -129,14 +143,32 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'অবৈধ পেমেন্ট মেথড! শুধুমাত্র বিকাশ, নগদ, রকেট অথবা ওয়ালেট প্রযোজ্য।' });
     }
 
-    // 1. Player ID verification (8-12 digits numeric for Free Fire)
+    // 1. Account / Target verification (Player UID for games, Facebook Profile/Page URL for social services)
+    const isSocialService = /facebook|follower|page|react|social|tiktok|instagram|youtube|telegram/i.test(product || '');
     const cleanPlayerId = playerId ? String(playerId).trim() : '';
-    if (!cleanPlayerId || !/^\d{8,12}$/.test(cleanPlayerId)) {
-      return res.status(400).json({ error: 'ভুল প্লেয়ার আইডি (UID)! ৮ থেকে ১২ সংখ্যার সঠিক প্লেয়ার আইডি দিন।' });
+
+    if (!cleanPlayerId) {
+      return res.status(400).json({ 
+        error: isSocialService 
+          ? 'ফেসবুক প্রোফাইল বা পেজ লিংক (URL) দিন!' 
+          : 'প্লেয়ার আইডি (UID) আবশ্যক!' 
+      });
     }
-    const dummyUids = ['12345678', '11111111', '00000000', '99999999', '123456789', '1234567890', '88888888'];
-    if (dummyUids.includes(cleanPlayerId) || /^(\d)\1{7,11}$/.test(cleanPlayerId)) {
-      return res.status(400).json({ error: 'নকল বা ডামি প্লেয়ার আইডি গ্রহণযোগ্য নয়! আসল গেম UID দিন।' });
+
+    if (isSocialService) {
+      // Must be a link or profile identifier (at least 4 characters)
+      if (cleanPlayerId.length < 4) {
+        return res.status(400).json({ error: 'সঠিক ফেসবুক প্রোফাইল বা পেজ লিংক দিন (কমপক্ষে ৪ অক্ষর)!' });
+      }
+    } else {
+      // Game UID: 8-12 digits numeric
+      if (!/^\d{8,12}$/.test(cleanPlayerId)) {
+        return res.status(400).json({ error: 'ভুল প্লেয়ার আইডি (UID)! ৮ থেকে ১২ সংখ্যার সঠিক প্লেয়ার আইডি দিন।' });
+      }
+      const dummyUids = ['12345678', '11111111', '00000000', '99999999', '123456789', '1234567890', '88888888'];
+      if (dummyUids.includes(cleanPlayerId) || /^(\d)\1{7,11}$/.test(cleanPlayerId)) {
+        return res.status(400).json({ error: 'নকল বা ডামি প্লেয়ার আইডি গ্রহণযোগ্য নয়! আসল গেম UID দিন।' });
+      }
     }
 
     // 2. Anti-Spam TrxID Verification (for bKash / Nagad / Rocket)
